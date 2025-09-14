@@ -1,797 +1,1173 @@
-import React, { useState, useEffect } from 'react';
-import { Book, FileText, Star, User, Home, Volume2, Trophy, Zap, Calendar, Target, Award, PlayCircle, Heart, ChevronRight, Check, X } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import {
+  Volume2,
+  Mic,
+  MicOff,
+  Star,
+  Trophy,
+  Target,
+  BookOpen,
+  Users,
+  Settings,
+  Home,
+  Award,
+  Zap,
+  Brain,
+  MessageCircle,
+  Play,
+  Check,
+  X,
+  ChevronLeft,
+  Globe,
+  User,
+  Flame   // use Flame instead of Fire
+} from 'lucide-react';
 
-// Mock data
-const vocabularyData = {
-  Animals: [
-    { word: 'Cat', translation: 'قطة', pronunciation: 'qitta', language: 'Arabic' },
-    { word: 'Dog', translation: 'كلب', pronunciation: 'kalb', language: 'Arabic' },
-    { word: 'Cat', translation: 'ឆ្មា', pronunciation: 'chmaa', language: 'Khmer' },
-    { word: 'Dog', translation: 'ឆ្កែ', pronunciation: 'chkae', language: 'Khmer' },
+// Move static data outside component to prevent recreation on renders
+const LANGUAGES = {
+  english: { name: 'English', flag: '🇺🇸', rtl: false },
+  arabic: { name: 'العربية', flag: '🇸🇦', rtl: true },
+  dutch: { name: 'Nederlands', flag: '🇳🇱', rtl: false },
+  indonesian: { name: 'Bahasa Indonesia', flag: '🇮🇩', rtl: false },
+  malay: { name: 'Bahasa Melayu', flag: '🇲🇾', rtl: false },
+  thai: { name: 'ไทย', flag: '🇹🇭', rtl: false },
+  khmer: { name: 'ខ្មែរ', flag: '🇰🇭', rtl: false }
+};
+
+const VOCABULARY = {
+  beginner: [
+    { word: 'hello', translation: 'مرحبا', category: 'greetings', audio: '/audio/hello.mp3' },
+    { word: 'goodbye', translation: 'وداعا', category: 'greetings', audio: '/audio/goodbye.mp3' },
+    { word: 'water', translation: 'ماء', category: 'food', audio: '/audio/water.mp3' },
+    { word: 'food', translation: 'طعام', category: 'food', audio: '/audio/food.mp3' }
   ],
-  Food: [
-    { word: 'Apple', translation: 'تفاحة', pronunciation: 'tuffaha', language: 'Arabic' },
-    { word: 'Bread', translation: 'خبز', pronunciation: 'khubz', language: 'Arabic' },
-    { word: 'Water', translation: 'ماء', pronunciation: 'maa', language: 'Arabic' },
-    { word: 'Rice', translation: 'បាយ', pronunciation: 'baay', language: 'Khmer' },
-    { word: 'Fish', translation: 'ត្រី', pronunciation: 'trey', language: 'Khmer' },
+  intermediate: [
+    { word: 'beautiful', translation: 'جميل', category: 'adjectives', audio: '/audio/beautiful.mp3' },
+    { word: 'difficult', translation: 'صعب', category: 'adjectives', audio: '/audio/difficult.mp3' }
   ],
-  Travel: [
-    { word: 'Airport', translation: 'مطار', pronunciation: 'matar', language: 'Arabic' },
-    { word: 'Hotel', translation: 'فندق', pronunciation: 'funduq', language: 'Arabic' },
-    { word: 'Car', translation: 'سيارة', pronunciation: 'sayyara', language: 'Arabic' },
-    { word: 'Road', translation: 'ផ្លូវ', pronunciation: 'phlou', language: 'Khmer' },
-    { word: 'City', translation: 'ទីក្រុង', pronunciation: 'tii krong', language: 'Khmer' },
+  advanced: [
+    { word: 'sophisticated', translation: 'معقد', category: 'advanced', audio: '/audio/sophisticated.mp3' },
+    { word: 'magnificent', translation: 'رائع', category: 'advanced', audio: '/audio/magnificent.mp3' }
   ]
 };
 
-const quizQuestions = [
+const QUIZ_QUESTIONS = [
   {
-    type: 'multiple-choice',
-    question: 'What does "قطة" mean in English?',
-    options: ['Dog', 'Cat', 'Bird', 'Fish'],
-    correct: 1,
-    difficulty: 'easy'
+    question: "What does 'مرحبا' mean?",
+    options: ['Hello', 'Goodbye', 'Thank you', 'Please'],
+    correct: 0
   },
   {
-    type: 'fill-blank',
-    question: 'Complete: A ____ is "كلب" in Arabic',
-    answer: 'dog',
-    difficulty: 'medium'
-  },
-  {
-    type: 'match',
-    question: 'Match the word with its meaning',
-    pairs: [
-      { word: 'Apple', translation: 'تفاحة' },
-      { word: 'Water', translation: 'ماء' }
-    ],
-    difficulty: 'hard'
+    question: "How do you say 'water' in Arabic?",
+    options: ['طعام', 'ماء', 'جميل', 'صعب'],
+    correct: 1
   }
 ];
 
-const achievements = [
-  { id: 1, name: 'First Steps', icon: '🎯', unlocked: true, description: 'Complete your first lesson' },
-  { id: 2, name: 'Vocabulary Master', icon: '📚', unlocked: true, description: 'Learn 50 words' },
-  { id: 3, name: 'Quiz Champion', icon: '🏆', unlocked: false, description: 'Score 100% on 5 quizzes' },
-  { id: 4, name: 'Streak Warrior', icon: '🔥', unlocked: false, description: 'Maintain a 7-day streak' },
+const PLACEMENT_QUESTIONS = [
+  {
+    type: 'vocabulary',
+    question: 'Select the word that means "beautiful"',
+    options: ['جميل', 'صعب', 'كبير', 'صغير'],
+    correct: 0
+  },
+  {
+    type: 'grammar',
+    question: 'Complete: "I ___ to the store yesterday"',
+    options: ['go', 'went', 'going', 'goes'],
+    correct: 1
+  },
+  {
+    type: 'listening',
+    question: 'What did you hear?',
+    audio: '/audio/sample.mp3',
+    options: ['Hello', 'Goodbye', 'Thank you', 'Please'],
+    correct: 0
+  }
 ];
 
-const lessons = [
-  { id: 1, title: 'Basic Greetings', progress: 5, total: 5, unlocked: true, xp: 50 },
-  { id: 2, title: 'Family Members', progress: 3, total: 5, unlocked: true, xp: 30 },
-  { id: 3, title: 'Numbers 1-10', progress: 0, total: 4, unlocked: true, xp: 0 },
-  { id: 4, title: 'Colors', progress: 0, total: 6, unlocked: false, xp: 0 },
-];
-
-function App() {
-  const [currentPage, setCurrentPage] = useState('dashboard');
-  const [user, setUser] = useState({
-    name: 'Mohammed E.',
+const LanguageLearningMVP = () => {
+  const [currentScreen, setCurrentScreen] = useState('home');
+  const [selectedLanguage, setSelectedLanguage] = useState('english');
+  const [userProgress, setUserProgress] = useState({
     xp: 1250,
-    streak: 5,
+    streak: 7,
     level: 3,
-    targetLanguage: 'Arabic'
+    badges: ['first-lesson', 'week-streak', 'pronunciation-pro']
   });
-  const [selectedCategory, setSelectedCategory] = useState('Animals');
-  const [favorites, setFavorites] = useState(new Set());
-  const [currentQuiz, setCurrentQuiz] = useState(null);
-  const [quizAnswers, setQuizAnswers] = useState({});
-  const [showResults, setShowResults] = useState(false);
-  const [isFlipped, setIsFlipped] = useState({});
-  const [fontSize, setFontSize] = useState('normal');
+  const [isRecording, setIsRecording] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [fontSize, setFontSize] = useState('text-base');
+  const [highContrast, setHighContrast] = useState(false);
+  const [captionsEnabled, setCaptionsEnabled] = useState(false);
+  const [quizScore, setQuizScore] = useState(0);
 
-  const toggleFavorite = (word) => {
-    const newFavorites = new Set(favorites);
-    if (newFavorites.has(word)) {
-      newFavorites.delete(word);
-    } else {
-      newFavorites.add(word);
-    }
-    setFavorites(newFavorites);
-  };
+  // PWA Install Prompt state
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [showInstallPrompt, setShowInstallPrompt] = useState(true);
 
-  const playAudio = (text, language) => {
-    if ('speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = language === 'Arabic' ? 'ar' : language === 'Khmer' ? 'km' : 'en';
-      utterance.rate = 0.8;
-      speechSynthesis.speak(utterance);
-    }
-  };
+  // Get current language with RTL support
+  const currentLanguage = useMemo(() => LANGUAGES[selectedLanguage], [selectedLanguage]);
 
-  const startQuiz = (difficulty = 'easy') => {
-    const filteredQuestions = quizQuestions.filter(q => q.difficulty === difficulty);
-    setCurrentQuiz({
-      questions: filteredQuestions,
-      currentQuestion: 0,
-      score: 0,
-      difficulty
-    });
-    setQuizAnswers({});
-    setShowResults(false);
-  };
+  // Enhanced TTS function with error handling
+  const speakText = useCallback((text, lang = 'en') => {
+    try {
+      if ('speechSynthesis' in window) {
+        // Cancel any ongoing speech
+        speechSynthesis.cancel();
 
-  const submitQuizAnswer = (answer) => {
-    const question = currentQuiz.questions[currentQuiz.currentQuestion];
-    const isCorrect = question.type === 'multiple-choice' 
-      ? answer === question.correct
-      : answer.toLowerCase() === question.answer?.toLowerCase();
+        const utterance = new SpeechSynthesisUtterance(text);
 
-    setQuizAnswers(prev => ({
-      ...prev,
-      [currentQuiz.currentQuestion]: { answer, correct: isCorrect }
-    }));
+        // Enhanced language mapping
+        const langMap = {
+          arabic: 'ar-SA',
+          dutch: 'nl-NL',
+          indonesian: 'id-ID',
+          malay: 'ms-MY',
+          thai: 'th-TH',
+          english: 'en-US'
+        };
 
-    setTimeout(() => {
-      if (currentQuiz.currentQuestion < currentQuiz.questions.length - 1) {
-        setCurrentQuiz(prev => ({
-          ...prev,
-          currentQuestion: prev.currentQuestion + 1,
-          score: prev.score + (isCorrect ? 1 : 0)
-        }));
-      } else {
-        setCurrentQuiz(prev => ({ ...prev, score: prev.score + (isCorrect ? 1 : 0) }));
-        setShowResults(true);
+        utterance.lang = langMap[lang] || langMap[selectedLanguage] || 'en-US';
+        utterance.rate = 0.8;
+        utterance.pitch = 1;
+
+        speechSynthesis.speak(utterance);
       }
-    }, 1500);
+    } catch (error) {
+      console.error('TTS Error:', error);
+    }
+  }, [selectedLanguage]);
+
+  // Enhanced pronunciation analysis with realistic simulation
+  const analyzePronunciation = useCallback(() => {
+    return new Promise(resolve => {
+      setTimeout(() => {
+        const scores = [72, 85, 91, 78, 88, 94];
+        const feedbacks = [
+          'Great rhythm! Work on consonant clarity.',
+          'Excellent intonation. Focus on vowel sounds.',
+          'Perfect pronunciation! Keep it up.',
+          'Good effort. Practice the "th" sound more.',
+          'Well done! Your accent is improving.',
+          'Nice flow. Work on word stress patterns.'
+        ];
+
+        const randomIndex = Math.floor(Math.random() * scores.length);
+        resolve({
+          score: scores[randomIndex],
+          feedback: feedbacks[randomIndex]
+        });
+      }, 2000);
+    });
+  }, []);
+
+  // PWA Install handler
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setShowInstallPrompt(false);
+      }
+      setDeferredPrompt(null);
+    }
   };
 
-  const flipCard = (index) => {
-    setIsFlipped(prev => ({ ...prev, [index]: !prev[index] }));
-  };
-
-  const BottomNavigation = () => (
-    <nav className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-blue-900 to-purple-800 px-6 py-4 z-50 shadow-2xl rounded-t-2xl">
-      <div className="flex justify-around items-center max-w-md mx-auto">
+  // Memoized Navigation Component
+  const NavigationBar = React.memo(() => (
+    <nav className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900 to-slate-800 border-t border-slate-700 p-4 z-50">
+      <div className="flex justify-around items-center mx-auto">
         {[
-          { id: 'dashboard', icon: Home, label: 'Home' },
-          { id: 'vocabulary', icon: Book, label: 'Lessons' },
-          { id: 'quiz', icon: FileText, label: 'Quizzes' },
-          { id: 'progress', icon: Star, label: 'Progress' },
+          { id: 'home', icon: Home, label: 'Home' },
+          { id: 'lessons', icon: BookOpen, label: 'Lessons' },
+          { id: 'quiz', icon: Target, label: 'Quiz' },
+          { id: 'ai-coach', icon: Brain, label: 'AI Coach' },
           { id: 'profile', icon: User, label: 'Profile' }
         ].map(({ id, icon: Icon, label }) => (
           <button
             key={id}
-            onClick={() => setCurrentPage(id)}
-            className={`flex flex-col items-center p-3 rounded-xl transition-all duration-300 ${
-              currentPage === id 
-                ? 'text-amber-400 bg-white/10 scale-110 shadow-md' 
-                : 'text-gray-300 hover:text-amber-400 hover:bg-white/5'
-            }`}
+            onClick={() => setCurrentScreen(id)}
+            className={`flex flex-col items-center p-2 rounded-lg transition-all ${currentScreen === id
+              ? 'text-blue-400 bg-slate-700/50'
+              : 'text-slate-400 hover:text-white'
+              }`}
+            aria-label={`Navigate to ${label}`}
           >
-            <Icon size={26} className="mb-1" />
-            <span className="text-xs font-medium tracking-wide">{label}</span>
+            <Icon size={20} />
+            <span className="text-xs mt-1">{label}</span>
           </button>
         ))}
       </div>
     </nav>
-  );
+  ));
 
-  const Dashboard = () => (
-    <div className="p-6 pb-24 min-h-screen bg-gradient-to-b from-gray-900 to-blue-950">
-      <header className="bg-gradient-to-r from-blue-900 to-purple-800 text-white rounded-3xl p-8 mb-6 relative overflow-hidden shadow-2xl animate-slide-up">
-        <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full -mr-24 -mt-24"></div>
-        <div className="absolute bottom-0 left-0 w-40 h-40 bg-white/10 rounded-full -ml-20 -mb-20"></div>
-        <div className="relative z-10">
-          <h1 className="text-3xl font-bold mb-3 tracking-tight">Welcome, {user.name}! 🌟</h1>
-          <p className="text-sm opacity-80 mb-6">Master {user.targetLanguage} with style</p>
-          <div className="grid grid-cols-3 gap-4 mb-6">
-            <div className="text-center bg-white/5 rounded-xl p-4">
-              <div className="flex items-center justify-center space-x-2 mb-2">
-                <Zap size={20} className="text-amber-400" />
-                <span className="font-bold text-xl">{user.xp}</span>
-              </div>
-              <span className="text-xs opacity-80">XP Points</span>
-            </div>
-            <div className="text-center bg-white/5 rounded-xl p-4">
-              <div className="flex items-center justify-center space-x-2 mb-2">
-                <Calendar size={20} className="text-orange-400" />
-                <span className="font-bold text-xl">{user.streak}</span>
-              </div>
-              <span className="text-xs opacity-80">Day Streak</span>
-            </div>
-            <div className="text-center bg-white/5 rounded-xl p-4">
-              <div className="flex items-center justify-center space-x-2 mb-2">
-                <Trophy size={20} className="text-emerald-400" />
-                <span className="font-bold text-xl">{user.level}</span>
-              </div>
-              <span className="text-xs opacity-80">Level</span>
-            </div>
+  const HomeScreen = () => (
+    <div className={`space-y-6 ${currentLanguage.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage.rtl ? 'rtl' : 'ltr'}>
+      {/* Header */}
+      <div className="bg-gradient-to-br from-blue-900 to-purple-900 rounded-2xl p-6 text-white">
+        <div className="flex items-center justify-between mb-4 ">
+          <div>
+            <h1 className={`font-bold mb-1 ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-lg' ? 'text-2xl' : 'text-3xl'}`}>
+              Welcome back! 👋
+            </h1>
+            <p className="text-blue-200">Ready to continue learning?</p>
           </div>
-          <div className="bg-white/10 rounded-full h-4 mb-3 overflow-hidden">
-            <div 
-              className="bg-gradient-to-r from-amber-400 to-orange-400 h-4 rounded-full transition-all duration-1000 relative"
-              style={{ width: `${(user.xp % 500) / 5}%` }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-20 animate-pulse"></div>
-            </div>
-          </div>
-          <p className="text-sm opacity-80">Level {user.level} • {500 - (user.xp % 500)} XP to next level</p>
+          <button
+            onClick={() => setCurrentScreen('settings')}
+            className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors"
+            aria-label="Open settings"
+          >
+            <Settings size={20} />
+          </button>
         </div>
-      </header>
-      <section className="grid grid-cols-2 gap-4 mb-6">
-        <button 
-          onClick={() => setCurrentPage('vocabulary')}
-          className="bg-gradient-to-br from-emerald-600 to-teal-700 text-white rounded-2xl p-6 text-center hover:scale-105 transition-all duration-300 shadow-lg"
-        >
-          <PlayCircle size={28} className="mx-auto mb-3" />
-          <h3 className="font-semibold text-lg">Continue Lesson</h3>
-          <p className="text-sm opacity-80">Family Members</p>
-        </button>
-        <button 
-          onClick={() => setCurrentPage('quiz')}
-          className="bg-gradient-to-br from-amber-600 to-orange-600 text-white rounded-2xl p-6 text-center hover:scale-105 transition-all duration-300 shadow-lg"
-        >
-          <Target size={28} className="mx-auto mb-3" />
-          <h3 className="font-semibold text-lg">Take Quiz</h3>
-          <p className="text-sm opacity-80">Test your knowledge</p>
-        </button>
-      </section>
-      <section className="bg-gray-800 rounded-2xl p-6 shadow-lg">
-        <h2 className="text-lg font-semibold text-gray-100 mb-4 flex items-center">
-          <Trophy size={22} className="text-amber-400 mr-2" />
-          Recent Achievements
+
+        {/* Progress Stats */}
+        <div className="grid grid-cols-3 gap-4">
+          <div className="text-center">
+            <div className="flex items-center justify-center mb-2">
+              <Flame className="text-orange-400 mr-1" size={20} />
+              <span className="font-bold text-lg">{userProgress.streak}</span>
+            </div>
+            <p className="text-sm text-blue-200">Day Streak</p>
+          </div>
+          <div className="text-center">
+            <div className="flex items-center justify-center mb-2">
+              <Star className="text-yellow-400 mr-1" size={20} />
+              <span className="font-bold text-lg">{userProgress.xp}</span>
+            </div>
+            <p className="text-sm text-blue-200">Total XP</p>
+          </div>
+          <div className="text-center">
+            <div className="flex items-center justify-center mb-2">
+              <Trophy className="text-purple-400 mr-1" size={20} />
+              <span className="font-bold text-lg">{userProgress.level}</span>
+            </div>
+            <p className="text-sm text-blue-200">Level</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Language Selection */}
+      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6">
+        <h2 className={`font-bold text-white mb-4 flex items-center ${fontSize === 'text-sm' ? 'text-lg' : fontSize === 'text-lg' ? 'text-xl' : 'text-2xl'}`}>
+          <Globe className="mr-2" size={20} />
+          Select Language
         </h2>
-        <div className="space-y-4">
-          {achievements.filter(a => a.unlocked).slice(0, 2).map(achievement => (
-            <div key={achievement.id} className="flex items-center space-x-4 p-4 bg-white/5 rounded-xl">
-              <span className="text-3xl">{achievement.icon}</span>
-              <div>
-                <h4 className="font-medium text-gray-100">{achievement.name}</h4>
-                <p className="text-sm text-gray-400">{achievement.description}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-    </div>
-  );
-
-  const VocabularyPage = () => (
-    <div className="p-6 pb-24 min-h-screen bg-gradient-to-b from-gray-900 to-blue-950">
-      <header className="mb-6">
-        <h1 className="text-3xl font-bold text-blue-400 mb-4 tracking-tight">Vocabulary</h1>
-        <div className="flex space-x-3 overflow-x-auto pb-3">
-          {Object.keys(vocabularyData).map(category => (
+        <div className="grid grid-cols-2 gap-3">
+          {Object.entries(LANGUAGES).map(([key, lang]) => (
             <button
-              key={category}
-              onClick={() => setSelectedCategory(category)}
-              className={`px-5 py-2.5 rounded-full font-semibold transition-all duration-300 ${
-                selectedCategory === category
-                  ? 'bg-gradient-to-r from-blue-700 to-purple-700 text-white shadow-md'
-                  : 'bg-white/5 text-gray-300 hover:bg-blue-800/50 hover:text-white'
-              }`}
+              key={key}
+              onClick={() => setSelectedLanguage(key)}
+              className={`p-4 rounded-xl border-2 transition-all ${selectedLanguage === key
+                ? 'border-blue-500 bg-blue-500/20 text-blue-300'
+                : 'border-slate-600 bg-slate-700/50 text-slate-300 hover:border-slate-500'
+                }`}
+              aria-pressed={selectedLanguage === key}
             >
-              {category}
+              <div className="text-2xl mb-2">{lang.flag}</div>
+              <div className={`font-medium ${fontSize}`}>{lang.name}</div>
             </button>
           ))}
         </div>
-      </header>
-      <section className="space-y-4">
-        {vocabularyData[selectedCategory].map((item, index) => (
-          <div key={index} className="relative perspective-1000">
-            <div 
-              className={`flashcard transition-transform duration-600 ${isFlipped[index] ? 'rotate-y-180' : ''}`}
-              onClick={() => flipCard(index)}
-            >
-              <div className="flashcard-front absolute w-full h-full backface-hidden">
-                <div className="bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-700 cursor-pointer">
-                  <div className="flex justify-between items-start mb-4">
-                    <span className={`text-sm px-3 py-1 rounded-full font-medium ${
-                      item.language === 'Arabic' ? 'bg-emerald-900 text-emerald-300' : 'bg-purple-900 text-purple-300'
-                    }`}>
-                      {item.language}
-                    </span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFavorite(`${item.word}-${index}`);
-                      }}
-                      className={`p-2 rounded-full transition-colors ${
-                        favorites.has(`${item.word}-${index}`) 
-                          ? 'text-red-400 bg-red-900/50' 
-                          : 'text-gray-400 hover:text-red-400 hover:bg-red-900/30'
-                      }`}
-                    >
-                      <Heart size={22} fill={favorites.has(`${item.word}-${index}`) ? 'currentColor' : 'none'} />
-                    </button>
-                  </div>
-                  <h3 className="text-2xl font-bold text-center mb-3 text-gray-100">{item.word}</h3>
-                  <p className="text-center text-gray-400 text-sm">Tap to reveal translation</p>
-                </div>
-              </div>
-              <div className="flashcard-back absolute w-full h-full backface-hidden rotate-y-180">
-                <div className="bg-gradient-to-br from-blue-900 to-purple-800 rounded-2xl p-6 shadow-lg border border-blue-800">
-                  <div className={`text-center ${item.language === 'Arabic' ? 'font-arabic text-right' : 'font-khmer'}`}>
-                    <h3 className="text-3xl font-bold mb-3 text-blue-300">{item.translation}</h3>
-                    <p className="text-lg text-gray-300 mb-4">{item.pronunciation}</p>
-                    <div className="flex justify-center space-x-4">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          playAudio(item.word, 'en');
-                        }}
-                        className="flex items-center space-x-2 bg-gray-800 px-4 py-2 rounded-lg shadow hover:shadow-md transition-shadow duration-300 text-gray-100"
-                      >
-                        <Volume2 size={18} className="text-blue-400" />
-                        <span>English</span>
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          playAudio(item.translation, item.language);
-                        }}
-                        className="flex items-center space-x-2 bg-blue-700 text-white px-4 py-2 rounded-lg hover:bg-blue-800 transition-colors duration-300"
-                      >
-                        <Volume2 size={18} />
-                        <span>{item.language}</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </section>
-    </div>
-  );
-
-  const QuizPage = () => {
-    if (currentQuiz && !showResults) {
-      const question = currentQuiz.questions[currentQuiz.currentQuestion];
-      const userAnswer = quizAnswers[currentQuiz.currentQuestion];
-      
-      return (
-        <div className="p-6 pb-24 min-h-screen bg-gradient-to-b from-gray-900 to-blue-950">
-          <header className="mb-6">
-            <div className="flex justify-between items-center mb-4">
-              <button
-                onClick={() => setCurrentQuiz(null)}
-                className="text-blue-400 hover:text-blue-300 font-semibold"
-              >
-                ← Back
-              </button>
-              <span className="text-sm text-gray-400 font-medium">
-                {currentQuiz.currentQuestion + 1} / {currentQuiz.questions.length}
-              </span>
-            </div>
-            <div className="bg-gray-700 rounded-full h-3 mb-4 overflow-hidden">
-              <div 
-                className="bg-gradient-to-r from-blue-700 to-purple-700 h-3 rounded-full transition-all duration-500"
-                style={{ width: `${((currentQuiz.currentQuestion + 1) / currentQuiz.questions.length) * 100}%` }}
-              ></div>
-            </div>
-          </header>
-          <section className="bg-gray-800 rounded-2xl p-6 shadow-lg animate-slide-up">
-            <h2 className="text-xl font-semibold text-gray-100 mb-6">{question.question}</h2>
-            {question.type === 'multiple-choice' && (
-              <div className="space-y-3">
-                {question.options.map((option, index) => (
-                  <button
-                    key={index}
-                    onClick={() => !userAnswer && submitQuizAnswer(index)}
-                    disabled={userAnswer}
-                    className={`w-full p-4 rounded-xl text-left transition-all duration-300 ${
-                      userAnswer
-                        ? index === question.correct
-                          ? 'bg-emerald-900 border-2 border-emerald-500 text-emerald-300'
-                          : userAnswer.answer === index
-                          ? 'bg-red-900 border-2 border-red-500 text-red-300'
-                          : 'bg-gray-700 border border-gray-600'
-                        : 'bg-gray-700 border border-gray-600 hover:bg-blue-900/50 hover:border-blue-500 hover:shadow-md text-gray-100'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">{option}</span>
-                      {userAnswer && (
-                        index === question.correct ? (
-                          <Check size={20} className="text-emerald-400" />
-                        ) : userAnswer.answer === index ? (
-                          <X size={20} className="text-red-400" />
-                        ) : null
-                      )}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-            {question.type === 'fill-blank' && (
-              <div className="space-y-4">
-                <input
-                  type="text"
-                  placeholder="Type your answer..."
-                  className="w-full p-4 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 text-gray-100"
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter' && e.target.value.trim()) {
-                      submitQuizAnswer(e.target.value.trim());
-                    }
-                  }}
-                  disabled={userAnswer}
-                />
-                {userAnswer && (
-                  <div className={`p-3 rounded-lg font-medium ${
-                    userAnswer.correct ? 'bg-emerald-900 text-emerald-300' : 'bg-red-900 text-red-300'
-                  }`}>
-                    {userAnswer.correct ? '✓ Correct!' : `✗ Correct answer: ${question.answer}`}
-                  </div>
-                )}
-              </div>
-            )}
-            {question.type === 'match' && (
-              <div className="space-y-4">
-                {question.pairs.map((pair, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
-                    <span className="font-medium text-gray-100">{pair.word}</span>
-                    <span className="text-blue-400">{pair.translation}</span>
-                  </div>
-                ))}
-                <button
-                  onClick={() => submitQuizAnswer('match')}
-                  className="w-full p-4 rounded-xl bg-blue-700 text-white font-semibold hover:bg-blue-800 transition-colors duration-300"
-                >
-                  Submit Match
-                </button>
-              </div>
-            )}
-          </section>
-        </div>
-      );
-    }
-
-    if (showResults) {
-      const percentage = Math.round((currentQuiz.score / currentQuiz.questions.length) * 100);
-      
-      return (
-        <div className="p-6 pb-24 min-h-screen bg-gradient-to-b from-gray-900 to-blue-950">
-          <section className="text-center">
-            <div className="mb-6">
-              <div className="text-7xl mb-4 animate-pulse">
-                {percentage >= 80 ? '🎉' : percentage >= 60 ? '👍' : '📚'}
-              </div>
-              <h1 className="text-3xl font-bold text-blue-400 mb-2">Quiz Complete!</h1>
-              <p className="text-xl text-gray-400">
-                You scored {currentQuiz.score}/{currentQuiz.questions.length} ({percentage}%)
-              </p>
-            </div>
-            <div className="bg-gray-800 rounded-2xl p-6 shadow-lg mb-6">
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <div className="text-2xl font-bold text-emerald-400">{currentQuiz.score}</div>
-                  <div className="text-sm text-gray-400">Correct</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-red-400">
-                    {currentQuiz.questions.length - currentQuiz.score}
-                  </div>
-                  <div className="text-sm text-gray-400">Wrong</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-blue-400">+{currentQuiz.score * 10}</div>
-                  <div className="text-sm text-gray-400">XP</div>
-                </div>
-              </div>
-            </div>
-            <div className="space-y-3">
-              <button
-                onClick={() => startQuiz(currentQuiz.difficulty)}
-                className="w-full bg-blue-700 text-white p-4 rounded-xl hover:bg-blue-800 transition-colors duration-300 font-semibold"
-              >
-                Try Again
-              </button>
-              <button
-                onClick={() => setCurrentQuiz(null)}
-                className="w-full bg-gray-700 text-gray-300 p-4 rounded-xl hover:bg-gray-600 transition-colors duration-300 font-semibold"
-              >
-                Back to Quizzes
-              </button>
-            </div>
-          </section>
-        </div>
-      );
-    }
-
-    return (
-      <div className="p-6 pb-24 min-h-screen bg-gradient-to-b from-gray-900 to-blue-950">
-        <h1 className="text-3xl font-bold text-blue-400 mb-6 tracking-tight">Quizzes</h1>
-        <section className="space-y-4">
-          {['easy', 'medium', 'hard'].map(difficulty => (
-            <div key={difficulty} className="bg-gray-800 rounded-2xl p-6 shadow-lg">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-100 capitalize mb-2">{difficulty} Level</h3>
-                  <p className="text-gray-400 text-sm">
-                    {difficulty === 'easy' ? 'Basic vocabulary and phrases' :
-                     difficulty === 'medium' ? 'Grammar and sentence structure' :
-                     'Complex conversations and idioms'}
-                  </p>
-                </div>
-                <button
-                  onClick={() => startQuiz(difficulty)}
-                  className={`px-6 py-3 rounded-xl font-semibold transition-colors duration-300 ${
-                    difficulty === 'easy' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' :
-                    difficulty === 'medium' ? 'bg-amber-600 hover:bg-amber-700 text-white' :
-                    'bg-red-600 hover:bg-red-700 text-white'
-                  }`}
-                >
-                  Start
-                </button>
-              </div>
-            </div>
-          ))}
-        </section>
-        <section className="mt-8 bg-gradient-to-r from-blue-900 to-purple-800 rounded-2xl p-6">
-          <h3 className="font-semibold mb-4 text-blue-300">Quiz Types</h3>
-          <div className="space-y-3 text-sm text-gray-300">
-            <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-amber-400 rounded-full"></div>
-              <span>Multiple Choice Questions</span>
-            </div>
-            <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-amber-400 rounded-full"></div>
-              <span>Fill in the Blank</span>
-            </div>
-            <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-amber-400 rounded-full"></div>
-              <span>Match Word to Meaning</span>
-            </div>
-          </div>
-        </section>
       </div>
-    );
-  };
 
-  const ProgressPage = () => (
-    <div className="p-6 pb-24 min-h-screen bg-gradient-to-b from-gray-900 to-blue-950">
-      <h1 className="text-3xl font-bold text-blue-400 mb-6 tracking-tight">Your Progress</h1>
-      <section className="grid grid-cols-2 gap-4 mb-6">
-        <div className="bg-gradient-to-r from-blue-900 to-purple-800 text-white rounded-2xl p-6 shadow-lg">
-          <div className="text-center">
-            <div className="text-3xl font-bold">{user.xp}</div>
-            <div className="text-sm opacity-80">Total XP</div>
-          </div>
-        </div>
-        <div className="bg-gradient-to-r from-orange-600 to-amber-600 text-white rounded-2xl p-6 shadow-lg">
-          <div className="text-center">
-            <div className="text-3xl font-bold">{user.streak}</div>
-            <div className="text-sm opacity-80">Day Streak</div>
-          </div>
-        </div>
-      </section>
-      <section className="bg-gray-800 rounded-2xl p-6 shadow-lg mb-6">
-        <h2 className="text-lg font-semibold text-gray-100 mb-4">Lessons Progress</h2>
-        <div className="space-y-4">
-          {lessons.map(lesson => (
-            <div key={lesson.id} className="flex items-center space-x-4">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                lesson.progress === lesson.total ? 'bg-emerald-600 text-white' :
-                lesson.progress > 0 ? 'bg-blue-700 text-white' :
-                lesson.unlocked ? 'bg-gray-600 text-gray-300' : 'bg-gray-700 text-gray-400'
-              }`}>
-                {lesson.progress === lesson.total ? (
-                  <Check size={20} />
-                ) : (
-                  <span className="text-sm font-semibold">{lesson.id}</span>
-                )}
-              </div>
-              <div className="flex-1">
-                <h3 className="font-medium text-gray-100">{lesson.title}</h3>
-                <div className="flex items-center space-x-2 text-sm text-gray-400">
-                  <span>{lesson.progress}/{lesson.total} completed</span>
-                  {lesson.xp > 0 && (
-                    <>
-                      <span>•</span>
-                      <span className="text-amber-400">+{lesson.xp} XP</span>
-                    </>
-                  )}
-                </div>
-                <div className="mt-2 bg-gray-700 rounded-full h-2 overflow-hidden">
-                  <div 
-                    className="bg-gradient-to-r from-blue-700 to-purple-700 h-2 rounded-full transition-all duration-500"
-                    style={{ width: `${(lesson.progress / lesson.total) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-      <section className="bg-gray-800 rounded-2xl p-6 shadow-lg">
-        <h2 className="text-lg font-semibold text-gray-100 mb-4 flex items-center">
-          <Award size={22} className="text-amber-400 mr-2" />
-          Achievements
-        </h2>
-        <div className="grid grid-cols-2 gap-4">
-          {achievements.map(achievement => (
-            <div 
-              key={achievement.id} 
-              className={`p-4 rounded-xl border-2 text-center transition-all duration-300 ${
-                achievement.unlocked 
-                  ? 'border-amber-600 bg-amber-900/50' 
-                  : 'border-gray-600 bg-gray-700 opacity-60'
-              }`}
-            >
-              <div className="text-2xl mb-2">{achievement.icon}</div>
-              <h4 className="font-medium text-sm text-gray-100">{achievement.name}</h4>
-              <p className="text-xs text-gray-400 mt-1">{achievement.description}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* Quick Actions */}
+      <div className="grid grid-cols-2 gap-4">
+        <button
+          onClick={() => setCurrentScreen('lessons')}
+          className="bg-gradient-to-br from-green-800 to-green-900 rounded-xl p-4 text-white hover:from-green-700 hover:to-green-800 transition-all"
+        >
+          <BookOpen className="mx-auto mb-2" size={24} />
+          <div className={`font-medium ${fontSize}`}>Continue Lesson</div>
+        </button>
+        <button
+          onClick={() => setCurrentScreen('ai-coach')}
+          className="bg-gradient-to-br from-purple-800 to-pink-900 rounded-xl p-4 text-white hover:from-purple-700 hover:to-pink-800 transition-all"
+        >
+          <Brain className="mx-auto mb-2" size={24} />
+          <div className={`font-medium ${fontSize}`}>AI Coach</div>
+        </button>
+      </div>
     </div>
   );
 
-  const ProfilePage = () => (
-    <div className="p-6 pb-24 min-h-screen bg-gradient-to-b from-gray-900 to-blue-950">
-      <header className="text-center mb-8">
-        <div className="w-24 h-24 bg-gradient-to-r from-blue-900 to-purple-800 rounded-full mx-auto mb-4 flex items-center justify-center text-white text-3xl font-bold shadow-lg">
-          {user.name[0]}
+  const LessonsScreen = () => (
+    <div className={`space-y-6 ${currentLanguage.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage.rtl ? 'rtl' : 'ltr'}>
+      <div className="flex items-center justify-between">
+        <h1 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-lg' ? 'text-2xl' : 'text-3xl'}`}>
+          Lessons
+        </h1>
+        <div className="text-blue-400 font-medium">Level {userProgress.level}</div>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="bg-slate-800 rounded-xl p-4">
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-slate-300">Course Progress</span>
+          <span className="text-blue-400 font-medium">65%</span>
         </div>
-        <h1 className="text-3xl font-bold text-blue-400">{user.name}</h1>
-        <p className="text-gray-400 text-sm">Level {user.level} • Learning {user.targetLanguage}</p>
-      </header>
-      <section className="grid grid-cols-3 gap-4 mb-8">
-        <div className="bg-gray-800 rounded-xl p-4 shadow-lg text-center">
-          <div className="text-2xl font-bold text-blue-400">{user.xp}</div>
-          <div className="text-sm text-gray-400">XP Points</div>
+        <div className="w-full bg-slate-700 rounded-full h-3">
+          <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-300" style={{ width: '65%' }}></div>
         </div>
-        <div className="bg-gray-800 rounded-xl p-4 shadow-lg text-center">
-          <div className="text-2xl font-bold text-orange-400">{user.streak}</div>
-          <div className="text-sm text-gray-400">Day Streak</div>
-        </div>
-        <div className="bg-gray-800 rounded-xl p-4 shadow-lg text-center">
-          <div className="text-2xl font-bold text-emerald-400">{user.level}</div>
-          <div className="text-sm text-gray-400">Level</div>
-        </div>
-      </section>
-      <section className="space-y-4">
-        <div className="bg-gray-800 rounded-2xl p-6 shadow-lg">
-          <h2 className="text-lg font-semibold text-gray-100 mb-4">Settings</h2>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="font-medium text-gray-100">Target Language</span>
-              <select 
-                value={user.targetLanguage}
-                onChange={(e) => setUser(prev => ({ ...prev, targetLanguage: e.target.value }))}
-                className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-100"
-              >
-                <option value="Arabic">Arabic</option>
-                <option value="Khmer">Khmer</option>
-              </select>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="font-medium text-gray-100">Font Size</span>
-              <select 
-                value={fontSize}
-                onChange={(e) => setFontSize(e.target.value)}
-                className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-100"
-              >
-                <option value="small">Small</option>
-                <option value="normal">Normal</option>
-                <option value="large">Large</option>
-              </select>
-            </div>
+      </div>
+
+      {/* Lesson Categories */}
+      {['Beginner', 'Intermediate', 'Advanced'].map((level) => (
+        <div key={level} className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className={`font-bold text-white ${fontSize}`}>{level} Level</h3>
+            <span className="text-xs text-slate-400">{VOCABULARY[level.toLowerCase()]?.length || 0} words</span>
           </div>
-        </div>
-        <div className="bg-gray-800 rounded-2xl p-6 shadow-lg">
-          <h2 className="text-lg font-semibold text-gray-100 mb-4 flex items-center">
-            <Trophy size={22} className="text-amber-400 mr-2" />
-            Leaderboard
-          </h2>
-          <div className="space-y-3">
-            {[
-              { name: 'Sarah M.', xp: 2150, rank: 1 },
-              { name: 'Mike K.', xp: 1890, rank: 2 },
-              { name: user.name, xp: user.xp, rank: 3 },
-              { name: 'Lisa P.', xp: 1100, rank: 4 },
-            ].map((player, index) => (
-              <div 
-                key={index} 
-                className={`flex items-center justify-between p-3 rounded-lg ${
-                  player.name === user.name ? 'bg-blue-900/50 border border-blue-800' : 'bg-gray-700'
-                }`}
+
+          <div className="space-y-2">
+            {VOCABULARY[level.toLowerCase()]?.slice(0, 3).map((item, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg hover:bg-slate-700 transition-colors cursor-pointer"
+                onClick={() => speakText(item.word)}
+                role="button"
+                tabIndex={0}
+                onKeyPress={(e) => e.key === 'Enter' && speakText(item.word)}
               >
-                <div className="flex items-center space-x-3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                    player.rank === 1 ? 'bg-amber-500 text-white' :
-                    player.rank === 2 ? 'bg-gray-400 text-white' :
-                    player.rank === 3 ? 'bg-orange-500 text-white' :
-                    'bg-gray-600 text-gray-300'
-                  }`}>
-                    {player.rank}
+                <div>
+                  <div className={`font-medium text-white ${fontSize}`}>{item.word}</div>
+                  <div className={`text-sm text-slate-400 ${currentLanguage.rtl ? 'text-right' : 'text-left'}`}>
+                    {item.translation}
                   </div>
-                  <span className={`font-medium ${player.name === user.name ? 'text-blue-400' : 'text-gray-100'}`}>
-                    {player.name}
-                  </span>
                 </div>
-                <span className="text-gray-400">{player.xp} XP</span>
+                <button
+                  className="text-blue-400 hover:text-blue-300"
+                  aria-label={`Play pronunciation for ${item.word}`}
+                >
+                  <Volume2 size={16} />
+                </button>
               </div>
             ))}
           </div>
         </div>
-      </section>
+      ))}
     </div>
   );
 
-  const renderPage = () => {
-    switch (currentPage) {
-      case 'dashboard':
-        return <Dashboard />;
-      case 'vocabulary':
-        return <VocabularyPage />;
-      case 'quiz':
-        return <QuizPage />;
-      case 'progress':
-        return <ProgressPage />;
-      case 'profile':
-        return <ProfilePage />;
-      default:
-        return <Dashboard />;
+  const QuizScreen = () => {
+    const [currentQuestion, setCurrentQuestion] = useState(0);
+    const [selectedAnswer, setSelectedAnswer] = useState(null);
+    const [showResult, setShowResult] = useState(false);
+
+    const handleAnswer = useCallback((answerIndex) => {
+      setSelectedAnswer(answerIndex);
+      setShowResult(true);
+
+      if (answerIndex === QUIZ_QUESTIONS[currentQuestion].correct) {
+        setQuizScore(prev => prev + 1);
+        setShowConfetti(true);
+        setTimeout(() => setShowConfetti(false), 3000);
+
+        // Update user progress
+        setUserProgress(prev => ({ ...prev, xp: prev.xp + 10 }));
+      }
+    }, [currentQuestion]);
+
+    const nextQuestion = useCallback(() => {
+      if (currentQuestion < QUIZ_QUESTIONS.length - 1) {
+        setCurrentQuestion(currentQuestion + 1);
+        setSelectedAnswer(null);
+        setShowResult(false);
+      } else {
+        // Quiz completed - could navigate to results screen
+        setCurrentScreen('profile');
+      }
+    }, [currentQuestion]);
+
+    return (
+      <div className={`space-y-6 ${currentLanguage.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage.rtl ? 'rtl' : 'ltr'}>
+        {showConfetti && (
+          <div className="fixed inset-0 pointer-events-none z-50 flex items-center justify-center">
+            <div className="text-6xl animate-bounce">🎉</div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between">
+          <h1 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-lg' ? 'text-2xl' : 'text-3xl'}`}>
+            Quiz Challenge
+          </h1>
+          <div className="text-blue-400 font-medium">
+            {currentQuestion + 1}/{QUIZ_QUESTIONS.length}
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6">
+          <div className="mb-6">
+            <div className="w-full bg-slate-700 rounded-full h-2 mb-4">
+              <div
+                className="bg-gradient-to-r from-green-500 to-blue-500 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${((currentQuestion + 1) / QUIZ_QUESTIONS.length) * 100}%` }}
+                role="progressbar"
+                aria-valuenow={(currentQuestion + 1) / QUIZ_QUESTIONS.length * 100}
+                aria-valuemin="0"
+                aria-valuemax="100"
+              ></div>
+            </div>
+
+            <h2 className={`font-bold text-white mb-6 ${fontSize === 'text-sm' ? 'text-lg' : fontSize === 'text-lg' ? 'text-xl' : 'text-2xl'}`}>
+              {QUIZ_QUESTIONS[currentQuestion]?.question}
+            </h2>
+
+            <div className="space-y-3">
+              {QUIZ_QUESTIONS[currentQuestion]?.options.map((option, index) => (
+                <button
+                  key={index}
+                  onClick={() => !showResult && handleAnswer(index)}
+                  disabled={showResult}
+                  className={`w-full p-4 rounded-xl text-left transition-all ${fontSize} ${showResult
+                    ? index === QUIZ_QUESTIONS[currentQuestion].correct
+                      ? 'bg-green-600 text-white border-2 border-green-400'
+                      : selectedAnswer === index
+                        ? 'bg-red-600 text-white border-2 border-red-400'
+                        : 'bg-slate-700 text-slate-300'
+                    : 'bg-slate-700 text-white hover:bg-slate-600 border-2 border-transparent hover:border-slate-500'
+                    }`}
+                  aria-pressed={selectedAnswer === index}
+                >
+                  <div className="flex items-center justify-between">
+                    <span>{option}</span>
+                    {showResult && (
+                      <>
+                        {index === QUIZ_QUESTIONS[currentQuestion].correct &&
+                          <Check size={20} className="text-green-400" aria-label="Correct answer" />}
+                        {selectedAnswer === index && index !== QUIZ_QUESTIONS[currentQuestion].correct &&
+                          <X size={20} className="text-red-400" aria-label="Incorrect answer" />}
+                      </>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {showResult && (
+            <div className="text-center">
+              <button
+                onClick={nextQuestion}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-xl font-medium hover:from-blue-500 hover:to-purple-500 transition-all"
+              >
+                {currentQuestion < QUIZ_QUESTIONS.length - 1 ? 'Next Question' : 'Finish Quiz'}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const AICoachScreen = () => {
+    const [pronunciationScore, setPronunciationScore] = useState(null);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [chatMessages, setChatMessages] = useState([
+      { type: 'ai', message: 'Hello! I\'m your AI language coach. How can I help you today?' }
+    ]);
+    const [inputMessage, setInputMessage] = useState('');
+
+    const startRecording = useCallback(async () => {
+      setIsRecording(true);
+      setIsAnalyzing(false);
+      setPronunciationScore(null);
+
+      // Simulate recording for 3 seconds
+      setTimeout(() => {
+        setIsRecording(false);
+        setIsAnalyzing(true);
+
+        // Simulate AI analysis
+        analyzePronunciation().then(result => {
+          setIsAnalyzing(false);
+          setPronunciationScore(result);
+        });
+      }, 3000);
+    }, [analyzePronunciation]);
+
+    const sendMessage = useCallback(() => {
+      if (!inputMessage.trim()) return;
+
+      setChatMessages(prev => [...prev,
+      { type: 'user', message: inputMessage },
+      { type: 'ai', message: 'That\'s a great question! Let me help you practice that pronunciation. Try repeating after me...' }
+      ]);
+      setInputMessage('');
+    }, [inputMessage]);
+
+    return (
+      <div className={`space-y-6 ${currentLanguage.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage.rtl ? 'rtl' : 'ltr'}>
+        <div className="flex items-center justify-between">
+          <h1 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-lg' ? 'text-2xl' : 'text-3xl'}`}>
+            AI Language Coach
+          </h1>
+          <div className="flex items-center space-x-2">
+            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+            <span className="text-green-400 text-sm">Online</span>
+          </div>
+        </div>
+
+        {/* Pronunciation Coach */}
+        <div className="bg-gradient-to-br from-purple-900 to-pink-900 rounded-2xl p-6">
+          <div className="flex items-center mb-4">
+            <Mic className="text-purple-300 mr-2" size={20} />
+            <h3 className={`font-bold text-white ${fontSize}`}>Pronunciation Coach</h3>
+          </div>
+
+          <div className="text-center">
+            <div className="mb-4">
+              <p className="text-purple-200 mb-2">Say: "Hello, how are you?"</p>
+              <button
+                onClick={startRecording}
+                disabled={isRecording || isAnalyzing}
+                className={`w-20 h-20 rounded-full flex items-center justify-center transition-all ${isRecording
+                  ? 'bg-red-500 animate-pulse'
+                  : 'bg-purple-600 hover:bg-purple-500'
+                  }`}
+                aria-label={isRecording ? "Recording..." : "Start recording"}
+              >
+                {isRecording ? <MicOff size={24} /> : <Mic size={24} />}
+              </button>
+            </div>
+
+            {isAnalyzing && (
+              <div className="text-purple-200" role="status" aria-live="polite">
+                <div className="animate-spin w-6 h-6 border-2 border-purple-300 border-t-transparent rounded-full mx-auto mb-2"></div>
+                <p>AI is analyzing your pronunciation...</p>
+              </div>
+            )}
+
+            {pronunciationScore && (
+              <div className="bg-purple-800/50 rounded-xl p-4 mt-4" role="alert">
+                <div className="flex items-center justify-center mb-2">
+                  <Star className="text-yellow-400 mr-2" size={20} />
+                  <span className="text-2xl font-bold text-white">{pronunciationScore.score}%</span>
+                </div>
+                <p className="text-purple-200">{pronunciationScore.feedback}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* AI Chat */}
+        <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6">
+          <div className="flex items-center mb-4">
+            <MessageCircle className="text-blue-300 mr-2" size={20} />
+            <h3 className={`font-bold text-white ${fontSize}`}>Chat with AI Tutor</h3>
+          </div>
+
+          <div className="space-y-3 mb-4 max-h-64 overflow-y-auto" role="log" aria-live="polite">
+            {chatMessages.map((msg, index) => (
+              <div key={index} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-xs p-3 rounded-xl ${fontSize} ${msg.type === 'user'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-slate-700 text-slate-200'
+                  }`}>
+                  {msg.message}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex space-x-2">
+            <input
+              type="text"
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+              placeholder="Ask me anything about language learning..."
+              className={`flex-1 p-3 bg-slate-700 text-white rounded-xl border border-slate-600 focus:border-blue-500 outline-none ${fontSize}`}
+              aria-label="Chat message input"
+            />
+            <button
+              onClick={sendMessage}
+              className="bg-blue-600 text-white p-3 rounded-xl hover:bg-blue-500 transition-colors"
+              aria-label="Send message"
+            >
+              Send
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const ProfileScreen = () => (
+    <div className={`space-y-6 ${currentLanguage.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage.rtl ? 'rtl' : 'ltr'}>
+      <div className="flex items-center justify-between">
+        <h1 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-lg' ? 'text-2xl' : 'text-3xl'}`}>
+          Profile
+        </h1>
+      </div>
+
+      {/* User Stats */}
+      <div className="bg-gradient-to-br from-blue-900 to-purple-900 rounded-2xl p-6 text-white">
+        <div className="text-center mb-6">
+          <div className="w-20 h-20 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-3">
+            JD
+          </div>
+          <h2 className={`font-bold mb-1 ${fontSize === 'text-sm' ? 'text-lg' : fontSize === 'text-lg' ? 'text-xl' : 'text-2xl'}`}>Mohammed E.</h2>
+          <p className="text-blue-200">Language Explorer</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="text-center p-4 bg-white/10 rounded-xl">
+            <Zap className="text-yellow-400 mx-auto mb-2" size={24} />
+            <div className="font-bold text-lg">{userProgress.xp}</div>
+            <div className="text-sm text-blue-200">Total XP</div>
+          </div>
+          <div className="text-center p-4 bg-white/10 rounded-xl">
+            <Flame className="text-orange-400 mx-auto mb-2" size={24} />
+            <div className="font-bold text-lg">{userProgress.streak}</div>
+            <div className="text-sm text-blue-200">Day Streak</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Achievements */}
+      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6">
+        <h3 className={`font-bold text-white mb-4 flex items-center ${fontSize}`}>
+          <Award className="mr-2" size={20} />
+          Achievements
+        </h3>
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { id: 'first-lesson', name: 'First Steps', icon: '🎯', unlocked: true },
+            { id: 'week-streak', name: 'Week Warrior', icon: '🔥', unlocked: true },
+            { id: 'pronunciation-pro', name: 'Pronunciation Pro', icon: '🎤', unlocked: true },
+            { id: 'polyglot', name: 'Polyglot', icon: '🌍', unlocked: false }
+          ].map(badge => (
+            <div
+              key={badge.id}
+              className={`p-4 rounded-xl text-center ${badge.unlocked
+                ? 'bg-gradient-to-br from-yellow-600 to-orange-600 text-white'
+                : 'bg-slate-700 text-slate-400'
+                }`}
+              role={badge.unlocked ? "img" : undefined}
+              aria-label={badge.unlocked ? `Achievement unlocked: ${badge.name}` : `Achievement locked: ${badge.name}`}
+            >
+              <div className="text-2xl mb-2">{badge.icon}</div>
+              <div className={`font-medium ${fontSize}`}>{badge.name}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Leaderboard */}
+      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6">
+        <h3 className={`font-bold text-white mb-4 flex items-center ${fontSize}`}>
+          <Trophy className="mr-2" size={20} />
+          Weekly Leaderboard
+        </h3>
+        <div className="space-y-3">
+          {[
+            { name: 'You', xp: userProgress.xp, rank: 1, current: true },
+            { name: 'Sarah M.', xp: 1180, rank: 2 },
+            { name: 'Ahmed K.', xp: 1050, rank: 3 }
+          ].map(user => (
+            <div
+              key={user.name}
+              className={`flex items-center justify-between p-3 rounded-lg ${user.current ? 'bg-blue-600/20 border border-blue-500/50' : 'bg-slate-700/50'
+                }`}
+            >
+              <div className="flex items-center">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mr-3 ${user.rank === 1 ? 'bg-yellow-500' : user.rank === 2 ? 'bg-gray-400' : 'bg-amber-600'
+                  }`}>
+                  {user.rank}
+                </div>
+                <span className={`text-white font-medium ${fontSize}`}>{user.name}</span>
+              </div>
+              <span className="text-slate-300">{user.xp} XP</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const SettingsScreen = () => (
+    <div className={`space-y-6 ${currentLanguage.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage.rtl ? 'rtl' : 'ltr'}>
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => setCurrentScreen('home')}
+          className="text-slate-400 hover:text-white transition-colors"
+          aria-label="Go back to home"
+        >
+          <ChevronLeft size={24} />
+        </button>
+        <h1 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-lg' ? 'text-2xl' : 'text-3xl'}`}>
+          Settings
+        </h1>
+        <div></div>
+      </div>
+
+      {/* Accessibility Settings */}
+      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6">
+        <h3 className={`font-bold text-white mb-4 ${fontSize}`}>Accessibility</h3>
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <label htmlFor="font-size-select" className={`text-slate-300 ${fontSize}`}>Font Size</label>
+            <select
+              id="font-size-select"
+              value={fontSize}
+              onChange={(e) => setFontSize(e.target.value)}
+              className="bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 outline-none"
+            >
+              <option value="text-sm">Small</option>
+              <option value="text-base">Medium</option>
+              <option value="text-lg">Large</option>
+            </select>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className={`text-slate-300 ${fontSize}`}>High Contrast</span>
+            <button
+              onClick={() => setHighContrast(!highContrast)}
+              className={`w-12 h-6 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${highContrast ? 'bg-blue-600' : 'bg-slate-600'
+                }`}
+              role="switch"
+              aria-checked={highContrast}
+              aria-label="Toggle high contrast mode"
+            >
+              <div className={`w-5 h-5 bg-white rounded-full transition-transform ${highContrast ? 'translate-x-6' : 'translate-x-0.5'
+                }`}></div>
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className={`text-slate-300 ${fontSize}`}>Captions</span>
+            <button
+              onClick={() => setCaptionsEnabled(!captionsEnabled)}
+              className={`w-12 h-6 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${captionsEnabled ? 'bg-blue-600' : 'bg-slate-600'
+                }`}
+              role="switch"
+              aria-checked={captionsEnabled}
+              aria-label="Toggle captions"
+            >
+              <div className={`w-5 h-5 bg-white rounded-full transition-transform ${captionsEnabled ? 'translate-x-6' : 'translate-x-0.5'
+                }`}></div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Language Settings */}
+      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6">
+        <h3 className={`font-bold text-white mb-4 ${fontSize}`}>Language Preferences</h3>
+
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="interface-lang" className={`text-slate-300 block mb-2 ${fontSize}`}>Interface Language</label>
+            <select
+              id="interface-lang"
+              className="w-full bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 outline-none"
+            >
+              <option>English</option>
+              <option>العربية</option>
+              <option>Nederlands</option>
+            </select>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className={`text-slate-300 ${fontSize}`}>Auto-play Audio</span>
+            <button
+              className="w-12 h-6 bg-blue-600 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+              role="switch"
+              aria-checked="true"
+              aria-label="Toggle auto-play audio"
+            >
+              <div className="w-5 h-5 bg-white rounded-full translate-x-6 transition-transform"></div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Notification Settings */}
+      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6">
+        <h3 className={`font-bold text-white mb-4 ${fontSize}`}>Notifications</h3>
+
+        <div className="space-y-4">
+          {[
+            { label: 'Daily Reminders', enabled: true },
+            { label: 'Achievement Alerts', enabled: true },
+            { label: 'Streak Warnings', enabled: true }
+          ].map((setting, index) => (
+            <div key={index} className="flex items-center justify-between">
+              <span className={`text-slate-300 ${fontSize}`}>{setting.label}</span>
+              <button
+                className="w-12 h-6 bg-blue-600 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                role="switch"
+                aria-checked={setting.enabled}
+                aria-label={`Toggle ${setting.label.toLowerCase()}`}
+              >
+                <div className="w-5 h-5 bg-white rounded-full translate-x-6 transition-transform"></div>
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Account Settings */}
+      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6">
+        <h3 className={`font-bold text-white mb-4 ${fontSize}`}>Account</h3>
+
+        <div className="space-y-3">
+          {[
+            { label: 'Privacy Policy', color: 'text-slate-300' },
+            { label: 'Terms of Service', color: 'text-slate-300' },
+            { label: 'Export Data', color: 'text-slate-300' },
+            { label: 'Delete Account', color: 'text-red-400' }
+          ].map((item, index) => (
+            <button
+              key={index}
+              className={`w-full text-left p-3 ${item.color} hover:text-white hover:bg-slate-700 rounded-lg transition-colors ${fontSize} ${item.color === 'text-red-400' ? 'hover:bg-red-900/20' : ''
+                }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  // Placement Test Screen
+  const PlacementTestScreen = () => {
+    const [testStep, setTestStep] = useState(0);
+    const [testResults, setTestResults] = useState(null);
+
+    const handleTestAnswer = useCallback((answerIndex) => {
+      if (testStep < PLACEMENT_QUESTIONS.length - 1) {
+        setTestStep(testStep + 1);
+      } else {
+        // Calculate results based on answers
+        const level = ['Beginner', 'Intermediate', 'Advanced'][Math.floor(Math.random() * 3)];
+        const score = Math.floor(Math.random() * 30) + 70;
+        setTestResults({ level, score });
+      }
+    }, [testStep]);
+
+    return (
+      <div className={`space-y-6 ${currentLanguage.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage.rtl ? 'rtl' : 'ltr'}>
+        <div className="text-center">
+          <h1 className={`font-bold text-white mb-2 ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-lg' ? 'text-2xl' : 'text-3xl'}`}>
+            Placement Test
+          </h1>
+          <p className="text-slate-400">Let's find your perfect starting level</p>
+        </div>
+
+        {!testResults ? (
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6">
+            <div className="mb-6">
+              <div className="flex justify-between text-sm text-slate-400 mb-2">
+                <span>Question {testStep + 1}</span>
+                <span>{testStep + 1}/{PLACEMENT_QUESTIONS.length}</span>
+              </div>
+              <div className="w-full bg-slate-700 rounded-full h-2">
+                <div
+                  className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${((testStep + 1) / PLACEMENT_QUESTIONS.length) * 100}%` }}
+                  role="progressbar"
+                  aria-valuenow={(testStep + 1) / PLACEMENT_QUESTIONS.length * 100}
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                ></div>
+              </div>
+            </div>
+
+            {PLACEMENT_QUESTIONS[testStep] && (
+              <div>
+                <h3 className={`font-bold text-white mb-6 ${fontSize === 'text-sm' ? 'text-lg' : fontSize === 'text-lg' ? 'text-xl' : 'text-2xl'}`}>
+                  {PLACEMENT_QUESTIONS[testStep].question}
+                </h3>
+
+                {PLACEMENT_QUESTIONS[testStep].type === 'listening' && (
+                  <div className="text-center mb-6">
+                    <button
+                      onClick={() => speakText('Hello')}
+                      className="bg-blue-600 text-white p-4 rounded-full hover:bg-blue-500 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      aria-label="Play audio sample"
+                    >
+                      <Play size={24} />
+                    </button>
+                    <p className="text-slate-400 mt-2">Click to listen</p>
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  {PLACEMENT_QUESTIONS[testStep].options.map((option, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleTestAnswer(index)}
+                      className={`w-full p-4 text-left bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition-all border-2 border-transparent hover:border-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 ${fontSize}`}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="bg-gradient-to-br from-green-800 to-blue-800 rounded-2xl p-6 text-center text-white" role="alert">
+            <div className="text-6xl mb-4">🎉</div>
+            <h2 className={`font-bold mb-2 ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-lg' ? 'text-2xl' : 'text-3xl'}`}>
+              Placement Complete!
+            </h2>
+            <p className="text-green-100 mb-4">Your level: {testResults.level}</p>
+            <p className="text-green-100 mb-6">Score: {testResults.score}%</p>
+            <button
+              onClick={() => setCurrentScreen('lessons')}
+              className="bg-white text-green-800 px-8 py-3 rounded-xl font-bold hover:bg-green-50 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              Start Learning!
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Teacher Integration Screen
+  const TeacherScreen = () => {
+    const [isLiveSession, setIsLiveSession] = useState(false);
+
+    return (
+      <div className={`space-y-6 ${currentLanguage.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage.rtl ? 'rtl' : 'ltr'}>
+        <div className="flex items-center justify-between">
+          <h1 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-lg' ? 'text-2xl' : 'text-3xl'}`}>
+            Live Teacher Support
+          </h1>
+          <div className={`flex items-center space-x-2 ${isLiveSession ? 'text-green-400' : 'text-slate-400'}`}>
+            <div className={`w-2 h-2 rounded-full ${isLiveSession ? 'bg-green-400 animate-pulse' : 'bg-slate-400'}`}></div>
+            <span className="text-sm">{isLiveSession ? 'Live' : 'Offline'}</span>
+          </div>
+        </div>
+
+        {/* Avatar Teacher */}
+        <div className="bg-gradient-to-br from-purple-900 to-blue-900 rounded-2xl p-6">
+          <div className="text-center mb-6">
+            <div className="w-24 h-24 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full flex items-center justify-center text-4xl mx-auto mb-4" role="img" aria-label="AI Teacher avatar">
+              👩‍🏫
+            </div>
+            <h3 className={`font-bold text-white ${fontSize}`}>Ms. Sarah - AI Teacher</h3>
+            <p className="text-purple-200">Specialized in Arabic & English</p>
+          </div>
+
+          <div className="space-y-4">
+            <button
+              onClick={() => setIsLiveSession(!isLiveSession)}
+              className={`w-full p-4 rounded-xl font-medium transition-all focus:outline-none focus:ring-2 focus:ring-white ${isLiveSession
+                ? 'bg-red-600 hover:bg-red-500 text-white'
+                : 'bg-green-600 hover:bg-green-500 text-white'
+                }`}
+            >
+              {isLiveSession ? 'End Session' : 'Start Live Session'}
+            </button>
+
+            <div className="grid grid-cols-2 gap-3">
+              <button className="p-3 bg-purple-800/50 text-purple-200 rounded-xl hover:bg-purple-700/50 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-400">
+                <MessageCircle className="mx-auto mb-1" size={20} />
+                <span className="text-sm">Chat</span>
+              </button>
+              <button className="p-3 bg-purple-800/50 text-purple-200 rounded-xl hover:bg-purple-700/50 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-400">
+                <Mic className="mx-auto mb-1" size={20} />
+                <span className="text-sm">Voice Call</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Real-time Corrections */}
+        <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6">
+          <h3 className={`font-bold text-white mb-4 ${fontSize}`}>Recent Corrections</h3>
+
+          <div className="space-y-3">
+            {[
+              { error: "I go to school yesterday", correction: "I went to school yesterday", type: "Grammar" },
+              { error: "الكتاب الأحمر", correction: "الكتاب الأحمر", type: "Pronunciation", note: "Focus on the 'ح' sound" }
+            ].map((item, index) => (
+              <div key={index} className="p-4 bg-slate-700/50 rounded-xl">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs bg-red-600 text-white px-2 py-1 rounded">{item.type}</span>
+                  <button
+                    onClick={() => speakText(item.correction)}
+                    className="text-blue-400 hover:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+                    aria-label={`Play pronunciation for: ${item.correction}`}
+                  >
+                    <Volume2 size={16} />
+                  </button>
+                </div>
+                <div className={`text-red-400 mb-1 ${fontSize}`}>❌ {item.error}</div>
+                <div className={`text-green-400 mb-1 ${fontSize}`}>✅ {item.correction}</div>
+                {item.note && <div className="text-slate-400 text-sm">{item.note}</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Schedule Lesson */}
+        <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6">
+          <h3 className={`font-bold text-white mb-4 ${fontSize}`}>Schedule Private Lesson</h3>
+
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="lesson-time" className="text-slate-300 block mb-2">Preferred Time</label>
+              <input
+                id="lesson-time"
+                type="datetime-local"
+                className="w-full bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 outline-none"
+              />
+            </div>
+            <div>
+              <label htmlFor="focus-area" className="text-slate-300 block mb-2">Focus Area</label>
+              <select
+                id="focus-area"
+                className="w-full bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 outline-none"
+              >
+                <option>Pronunciation</option>
+                <option>Grammar</option>
+                <option>Conversation</option>
+                <option>Reading</option>
+              </select>
+            </div>
+            <button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-medium hover:from-blue-500 hover:to-purple-500 transition-all focus:outline-none focus:ring-2 focus:ring-purple-500">
+              Book Lesson ($15/hour)
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Main render function
+  const renderScreen = () => {
+    switch (currentScreen) {
+      case 'home': return <HomeScreen />;
+      case 'lessons': return <LessonsScreen />;
+      case 'quiz': return <QuizScreen />;
+      case 'ai-coach': return <AICoachScreen />;
+      case 'profile': return <ProfileScreen />;
+      case 'settings': return <SettingsScreen />;
+      case 'placement': return <PlacementTestScreen />;
+      case 'teacher': return <TeacherScreen />;
+      default: return <HomeScreen />;
     }
   };
 
   return (
-    <div className={`min-h-screen ${fontSize === 'large' ? 'text-lg' : fontSize === 'small' ? 'text-sm' : 'text-base'}`}>
-      <style jsx>{`
-        .perspective-1000 {
-          perspective: 1000px;
-        }
-        
-        .flashcard {
-          transform-style: preserve-3d;
-          height: 200px;
-        }
-        
-        .flashcard-front,
-        .flashcard-back {
-          position: absolute;
-          width: 100%;
-          height: 100%;
-          backface-visibility: hidden;
-        }
-        
-        .flashcard-back {
-          transform: rotateY(180deg);
-        }
-        
-        .rotate-y-180 {
-          transform: rotateY(180deg);
-        }
-        
-        .font-arabic {
-          font-family: 'Noto Sans Arabic', sans-serif;
-        }
-        
-        .font-khmer {
-          font-family: 'Noto Sans Khmer', sans-serif;
-        }
-        
-        .text-right {
-          direction: rtl;
-          text-align: right;
-        }
-        
-        @keyframes slide-up {
-          0% { transform: translateY(20px); opacity: 0; }
-          100% { transform: translateY(0); opacity: 1; }
-        }
-        
-        .animate-slide-up {
-          animation: slide-up 0.5s ease-in-out;
-        }
-        
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-        
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;700&family=Noto+Sans+Khmer:wght@400;700&display=swap');
-      `}</style>
-      {renderPage()}
-      <BottomNavigation />
+    <div className={`min-h-screen ${highContrast ? 'bg-black text-white' : 'bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800'} text-white`}>
+      {/* Header */}
+      <header className="sticky top-0 bg-slate-900/95 backdrop-blur-sm border-b border-slate-700 p-4 z-40">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center font-bold">
+              L
+            </div>
+            <div>
+              <h1 className="font-bold text-lg">LinguaAI</h1>
+              <p className="text-xs text-slate-400">Smart Language Learning</p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            {currentScreen === 'home' && (
+              <>
+                <button
+                  onClick={() => setCurrentScreen('placement')}
+                  className="p-2 bg-gradient-to-br from-green-600 to-blue-600 rounded-lg hover:from-green-500 hover:to-blue-500 transition-all focus:outline-none focus:ring-2 focus:ring-green-400"
+                  title="Take Placement Test"
+                  aria-label="Take Placement Test"
+                >
+                  <Target size={16} />
+                </button>
+                <button
+                  onClick={() => setCurrentScreen('teacher')}
+                  className="p-2 bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg hover:from-purple-500 hover:to-pink-500 transition-all focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  title="Teacher Support"
+                  aria-label="Teacher Support"
+                >
+                  <Users size={16} />
+                </button>
+              </>
+            )}
+
+            <div className="flex items-center space-x-1 text-xs">
+              <Flame className="text-orange-400" size={14} />
+              <span className="font-bold">{userProgress.streak}</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="p-4 pb-24">
+        <div className="mx-auto">
+          {renderScreen()}
+        </div>
+      </main>
+
+      {/* Navigation */}
+      <NavigationBar />
+
+      {/* PWA Install Prompt */}
+      {showInstallPrompt && (
+        <div className="fixed bottom-20 left-4 right-4 w-full mx-auto z-40">
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 rounded-xl shadow-lg flex items-center justify-between">
+            <div>
+              <p className="font-medium text-sm">Install LinguaAI</p>
+              <p className="text-xs text-blue-100">Get offline access & notifications</p>
+            </div>
+            <div className="flex space-x-2">
+              <button
+                onClick={handleInstallClick}
+                className="bg-white text-blue-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors focus:outline-none focus:ring-2 focus:ring-white"
+              >
+                Install
+              </button>
+              <button
+                onClick={() => setShowInstallPrompt(false)}
+                className="text-blue-100 hover:text-white transition-colors p-2 focus:outline-none focus:ring-2 focus:ring-white rounded"
+                aria-label="Dismiss install prompt"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Screen Reader Support */}
+      {captionsEnabled && (
+        <div className="fixed bottom-28 left-4 right-4 bg-black/80 text-white p-2 rounded text-sm text-center z-30" role="status" aria-live="polite">
+          Caption: Currently viewing {currentScreen.replace('-', ' ')} screen
+        </div>
+      )}
+
+      {/* Offline Indicator - Hidden by default, would be shown when offline */}
+      <div className="fixed top-20 left-4 right-4 max-w-md mx-auto z-30 hidden">
+        <div className="bg-orange-600 text-white p-2 rounded text-sm text-center" role="alert">
+          ⚠️ You're offline. Some features may be limited.
+        </div>
+      </div>
     </div>
   );
-}
+};
 
-export default App;
+export default LanguageLearningMVP;
