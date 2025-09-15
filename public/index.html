@@ -1,13 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Language Learning MVP - 2</title>
-    
-  </head>
-  <body>
-    <div id="root">
-    </div>
-  </body>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Language Learning MVP - 2</title>
+
+</head>
+
+<body>
+  <div id="root">
+  </div>
+</body>
+<script>
+  const [selectedLanguage, setSelectedLanguage] = useState(() => {
+    const savedLanguage = localStorage.getItem('selectedLanguage');
+    return savedLanguage && LANGUAGES[savedLanguage] ? savedLanguage : 'english';
+  });
+  useEffect(() => {
+    localStorage.setItem('selectedLanguage', selectedLanguage);
+  }, [selectedLanguage]); useEffect(() => {
+    const validateTranslations = () => {
+      const englishKeys = Object.keys(TRANSLATIONS.english);
+      const arabicKeys = Object.keys(TRANSLATIONS.arabic);
+      const missing = englishKeys.filter(key => !arabicKeys.includes(key));
+      if (missing.length) {
+        console.warn('Missing Arabic translations:', missing);
+      }
+    };
+    validateTranslations();
+  }, []);  
+</script>
+
 </html>
