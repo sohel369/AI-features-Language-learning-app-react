@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import TextToSpeech from "./TextToSpeech";
+import Quiz from "./quiz.js";
+
 import {
   Volume2,
   Mic,
@@ -105,7 +108,11 @@ const TRANSLATIONS = {
     lessonsNav: 'Lessons',
     quizNav: 'Quiz',
     aiCoachNav: 'AI Coach',
-    profileNav: 'Profile'
+    profileNav: 'Profile',
+    typeMessage: 'Type your message...',
+    fillBlank: 'Fill in the blank:',
+    matchPairs: 'Match the pairs:',
+    trueFalse: 'True or False:'
   },
   arabic: {
     welcomeBack: 'مرحباً بعودتك! 👋',
@@ -177,7 +184,11 @@ const TRANSLATIONS = {
     lessonsNav: 'الدروس',
     quizNav: 'اختبار',
     aiCoachNav: 'مدرب AI',
-    profileNav: 'الملف'
+    profileNav: 'الملف',
+    typeMessage: 'اكتب رسالتك...',
+    fillBlank: 'املأ الفراغ:',
+    matchPairs: 'ربط الأزواج:',
+    trueFalse: 'صح أم خطأ:'
   },
   dutch: {
     welcomeBack: 'Welkom terug! 👋',
@@ -249,7 +260,11 @@ const TRANSLATIONS = {
     lessonsNav: 'Lessen',
     quizNav: 'Quiz',
     aiCoachNav: 'AI Coach',
-    profileNav: 'Profiel'
+    profileNav: 'Profiel',
+    typeMessage: 'Typ je bericht...',
+    fillBlank: 'Vul het gat in:',
+    matchPairs: 'Koppel de paren:',
+    trueFalse: 'Waar of niet waar:'
   },
   indonesian: {
     welcomeBack: 'Selamat datang kembali! 👋',
@@ -321,7 +336,11 @@ const TRANSLATIONS = {
     lessonsNav: 'Pelajaran',
     quizNav: 'Kuis',
     aiCoachNav: 'Pelatih AI',
-    profileNav: 'Profil'
+    profileNav: 'Profil',
+    typeMessage: 'Ketik pesan Anda...',
+    fillBlank: 'Isi kekosongan:',
+    matchPairs: 'Cocokkan pasangan:',
+    trueFalse: 'Benar atau Salah:'
   },
   malay: {
     welcomeBack: 'Selamat kembali! 👋',
@@ -393,7 +412,11 @@ const TRANSLATIONS = {
     lessonsNav: 'Pelajaran',
     quizNav: 'Kuiz',
     aiCoachNav: 'Jurubahasa AI',
-    profileNav: 'Profil'
+    profileNav: 'Profil',
+    typeMessage: 'Taip mesej anda...',
+    fillBlank: 'Isi kekosongan:',
+    matchPairs: 'Padankan pasangan:',
+    trueFalse: 'Betul atau salah:'
   },
   thai: {
     welcomeBack: 'ยินดีต้อนรับกลับ! 👋',
@@ -465,7 +488,11 @@ const TRANSLATIONS = {
     lessonsNav: 'บทเรียน',
     quizNav: 'แบบทดสอบ',
     aiCoachNav: 'โค้ช AI',
-    profileNav: 'โปรไฟล์'
+    profileNav: 'โปรไฟล์',
+    typeMessage: 'พิมพ์ข้อความของคุณ...',
+    fillBlank: 'เติมช่องว่าง:',
+    matchPairs: 'จับคู่:',
+    trueFalse: 'จริงหรือเท็จ:'
   },
   khmer: {
     welcomeBack: 'សូមស្វាគមន៍ត្រឡប់មកវិញ! 👋',
@@ -537,61 +564,120 @@ const TRANSLATIONS = {
     lessonsNav: 'មេរៀន',
     quizNav: 'សំណួរ',
     aiCoachNav: 'គ្រូ AI',
-    profileNav: 'ប្រវត្តិរូប'
+    profileNav: 'ប្រវត្តិរូប',
+    typeMessage: 'វាយសាររបស់អ្នក...',
+    fillBlank: 'បំពេញទទេ:',
+    matchPairs: 'ផ្គូផ្គង:',
+    trueFalse: 'ពិត ឬមិនពិត:'
   }
 };
 
 const VOCABULARY = {
-  beginner: [
-    { word: 'hello', translation: 'مَرْحَبًا', category: 'greetings', audio: '/audio/hello.mp3' },
-    { word: 'goodbye', translation: 'وَدَاعًا', category: 'greetings', audio: '/audio/goodbye.mp3' },
-    { word: 'water', translation: 'مَاءٌ', category: 'food', audio: '/audio/water.mp3' },
-    { word: 'food', translation: 'طَعَامٌ', category: 'food', audio: '/audio/food.mp3' }
-  ],
-  intermediate: [
-    { word: 'beautiful', translation: 'جَمِيلٌ', category: 'adjectives', audio: '/audio/beautiful.mp3' },
-    { word: 'difficult', translation: 'صَعْبٌ', category: 'adjectives', audio: '/audio/difficult.mp3' }
-  ],
-  advanced: [
-    { word: 'sophisticated', translation: 'مُعَقَّدٌ', category: 'advanced', audio: '/audio/sophisticated.mp3' },
-    { word: 'magnificent', translation: 'رَائِعٌ', category: 'advanced', audio: '/audio/magnificent.mp3' }
-  ]
+  beginner: {
+    english: [
+      { word: 'hello', translation: 'مَرْحَبًا', category: 'greetings', audio: '/audio/hello.mp3' },
+      { word: 'goodbye', translation: 'وَدَاعًا', category: 'greetings', audio: '/audio/goodbye.mp3' },
+      { word: 'water', translation: 'مَاءٌ', category: 'food', audio: '/audio/water.mp3' },
+      { word: 'food', translation: 'طَعَامٌ', category: 'food', audio: '/audio/food.mp3' }
+    ],
+    dutch: [
+      { word: 'hallo', translation: 'مرحبا', category: 'greetings', audio: '/audio/hallo.mp3' },
+      { word: 'tot ziens', translation: 'وداعا', category: 'greetings', audio: '/audio/totziens.mp3' },
+      { word: 'water', translation: 'ماء', category: 'food', audio: '/audio/water.mp3' },
+      { word: 'eten', translation: 'طعام', category: 'food', audio: '/audio/eten.mp3' }
+    ],
+    indonesian: [
+      { word: 'halo', translation: 'مرحبا', category: 'greetings', audio: '/audio/halo.mp3' },
+      { word: 'selamat tinggal', translation: 'وداعا', category: 'greetings', audio: '/audio/selamattinggal.mp3' },
+      { word: 'air', translation: 'ماء', category: 'food', audio: '/audio/air.mp3' },
+      { word: 'makanan', translation: 'طعام', category: 'food', audio: '/audio/makanan.mp3' }
+    ],
+    malay: [
+      { word: 'hello', translation: 'مرحبا', category: 'greetings', audio: '/audio/hello.mp3' },
+      { word: 'selamat tinggal', translation: 'وداعا', category: 'greetings', audio: '/audio/selamattinggal.mp3' },
+      { word: 'air', translation: 'ماء', category: 'food', audio: '/audio/air.mp3' },
+      { word: 'makanan', translation: 'طعام', category: 'food', audio: '/audio/makanan.mp3' }
+    ],
+    thai: [
+      { word: 'สวัสดี', translation: 'مرحبا', category: 'greetings', audio: '/audio/sawasdee.mp3' },
+      { word: 'ลาก่อน', translation: 'وداعا', category: 'greetings', audio: '/audio/lagorn.mp3' },
+      { word: 'น้ำ', translation: 'ماء', category: 'food', audio: '/audio/nam.mp3' },
+      { word: 'อาหาร', translation: 'طعام', category: 'food', audio: '/audio/aharn.mp3' }
+    ],
+    khmer: [
+      { word: 'សួស្តី', translation: 'مرحبا', category: 'greetings', audio: '/audio/suostei.mp3' },
+      { word: 'លាហើយ', translation: 'وداعا', category: 'greetings', audio: '/audio/laheuy.mp3' },
+      { word: 'ទឹក', translation: 'ماء', category: 'food', audio: '/audio/tuk.mp3' },
+      { word: 'អាហារ', translation: 'طعام', category: 'food', audio: '/audio/ahor.mp3' }
+    ]
+  },
+  intermediate: {
+    english: [
+      { word: 'beautiful', translation: 'جَمِيلٌ', category: 'adjectives', audio: '/audio/beautiful.mp3' },
+      { word: 'difficult', translation: 'صَعْبٌ', category: 'adjectives', audio: '/audio/difficult.mp3' }
+    ],
+    dutch: [
+      { word: 'mooi', translation: 'جميل', category: 'adjectives', audio: '/audio/mooi.mp3' },
+      { word: 'moeilijk', translation: 'صعب', category: 'adjectives', audio: '/audio/moeilijk.mp3' }
+    ],
+    indonesian: [
+      { word: 'cantik', translation: 'جميل', category: 'adjectives', audio: '/audio/cantik.mp3' },
+      { word: 'sulit', translation: 'صعب', category: 'adjectives', audio: '/audio/sulit.mp3' }
+    ],
+    malay: [
+      { word: 'cantik', translation: 'جميل', category: 'adjectives', audio: '/audio/cantik.mp3' },
+      { word: 'sukar', translation: 'صعب', category: 'adjectives', audio: '/audio/sukar.mp3' }
+    ],
+    thai: [
+      { word: 'สวย', translation: 'جميل', category: 'adjectives', audio: '/audio/suay.mp3' },
+      { word: 'ยาก', translation: 'صعب', category: 'adjectives', audio: '/audio/yak.mp3' }
+    ],
+    khmer: [
+      { word: 'ស្អាត', translation: 'جميل', category: 'adjectives', audio: '/audio/sat.mp3' },
+      { word: 'ពិបាក', translation: 'صعب', category: 'adjectives', audio: '/audio/pibak.mp3' }
+    ]
+  },
+  advanced: {
+    english: [
+      { word: 'sophisticated', translation: 'مُعَقَّدٌ', category: 'advanced', audio: '/audio/sophisticated.mp3' },
+      { word: 'magnificent', translation: 'رَائِعٌ', category: 'advanced', audio: '/audio/magnificent.mp3' }
+    ],
+    dutch: [
+      { word: 'geavanceerd', translation: 'معقد', category: 'advanced', audio: '/audio/geavanceerd.mp3' },
+      { word: 'prachtig', translation: 'رائع', category: 'advanced', audio: '/audio/prachtig.mp3' }
+    ],
+    indonesian: [
+      { word: 'sofistikasi', translation: 'معقد', category: 'advanced', audio: '/audio/sofistikasi.mp3' },
+      { word: 'megah', translation: 'رائع', category: 'advanced', audio: '/audio/megah.mp3' }
+    ],
+    malay: [
+      { word: 'sofistikated', translation: 'معقد', category: 'advanced', audio: '/audio/sofistikated.mp3' },
+      { word: 'hebat', translation: 'رائع', category: 'advanced', audio: '/audio/hebat.mp3' }
+    ],
+    thai: [
+      { word: 'ซับซ้อน', translation: 'معقد', category: 'advanced', audio: '/audio/subsorn.mp3' },
+      { word: 'ยิ่งใหญ่', translation: 'رائع', category: 'advanced', audio: '/audio/yingyai.mp3' }
+    ],
+    khmer: [
+      { word: 'ស្មុគស្មាញ', translation: 'معقد', category: 'advanced', audio: '/audio/smoogsmoan.mp3' },
+      { word: 'រុងរឿង', translation: 'رائع', category: 'advanced', audio: '/audio/rungrueang.mp3' }
+    ]
+  }
 };
 
-const QUIZ_QUESTIONS = [
-  {
-    question: "What does 'مَرْحَبًا' mean?",
-    options: ['Hello', 'Goodbye', 'Thank you', 'Please'],
-    correct: 0
-  },
-  {
-    question: "How do you say 'water' in Arabic?",
-    options: ['طَعَامٌ', 'مَاءٌ', 'جَمِيلٌ', 'صَعْبٌ'],
-    correct: 1
-  }
-];
 
-const PLACEMENT_QUESTIONS = [
-  {
-    type: 'vocabulary',
-    question: 'Select the word that means "beautiful"',
-    options: ['جَمِيلٌ', 'صَعْبٌ', 'كَبِيرٌ', 'صَغِيرٌ'],
-    correct: 0
-  },
-  {
-    type: 'grammar',
-    question: 'Complete: "I ___ to the store yesterday"',
-    options: ['go', 'went', 'going', 'goes'],
-    correct: 1
-  },
-  {
-    type: 'listening',
-    question: 'What did you hear?',
-    audio: '/audio/sample.mp3',
-    options: ['Hello', 'Goodbye', 'Thank you', 'Please'],
-    correct: 0
-  }
-];
+const PLACEMENT_QUESTIONS = {
+  english: [
+    {
+      type: 'vocabulary',
+      question: 'Select the word that means "beautiful"',
+      options: ['جَمِيلٌ', 'صَعْبٌ', 'كَبِيرٌ', 'صَغِيرٌ'],
+      correct: 0
+    },
+    // ... more
+  ],
+  // Similar for other languages
+};
 
 const LanguageLearningMVP = () => {
   const [currentScreen, setCurrentScreen] = useState('home');
@@ -630,18 +716,19 @@ const LanguageLearningMVP = () => {
     { id: 'profile', icon: User, labelKey: 'profileNav' }
   ], [t]);
 
-  // Enhanced TTS function with error handling (uses Web Speech with Google voices in supported browsers)
+
+  // Enhanced TTS function using Web Speech API with Google voices (best client-side approximation for Google TTS)
+  // For full Google TTS, consider integrating responsivevoice.org or a server-side proxy with Google Cloud TTS API
+  // Here, we prioritize voices with 'Google' in name for Arabic with diacritics support
   const speakText = useCallback((text, lang = 'en') => {
     try {
       if ('speechSynthesis' in window) {
-        // Cancel any ongoing speech
         speechSynthesis.cancel();
 
         const utterance = new SpeechSynthesisUtterance(text);
 
-        // Enhanced language mapping (Google voices via Web Speech)
         const langMap = {
-          arabic: 'ar-SA',
+          arabic: 'ar-SA', // Supports diacritics (vowels) with Google voices
           dutch: 'nl-NL',
           indonesian: 'id-ID',
           malay: 'ms-MY',
@@ -654,12 +741,35 @@ const LanguageLearningMVP = () => {
         utterance.rate = 0.8;
         utterance.pitch = 1;
 
+        // Prefer Google voices for better quality and diacritic support
+        const voices = speechSynthesis.getVoices();
+        const googleVoice = voices.find(voice => voice.name.includes('Google') && voice.lang === utterance.lang);
+        if (googleVoice) {
+          utterance.voice = googleVoice;
+        }
+
         speechSynthesis.speak(utterance);
+      } else {
+        // Fallback: Log for server-side Google TTS integration if needed
+        console.log('Web Speech not supported. Integrate Google Cloud TTS via API.');
       }
     } catch (error) {
       console.error('TTS Error:', error);
     }
   }, [selectedLanguage]);
+
+  // Load voices asynchronously
+  useEffect(() => {
+    const loadVoices = () => {
+      const voices = speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        // Voices loaded
+      }
+    };
+    speechSynthesis.addEventListener('voiceschanged', loadVoices);
+    loadVoices();
+    return () => speechSynthesis.removeEventListener('voiceschanged', loadVoices);
+  }, []);
 
   // PWA Install handler
   useEffect(() => {
@@ -798,229 +908,409 @@ const LanguageLearningMVP = () => {
     </div>
   );
 
-  const LessonsScreen = () => (
-    <div className={`space-y-6 ${currentLanguage.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage.rtl ? 'rtl' : 'ltr'}>
-      <div className="flex items-center justify-between">
-        <h1 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-lg' ? 'text-2xl' : 'text-3xl'}`}>
-          {t('lessons')}
-        </h1>
-        <div className="text-blue-400 font-medium">{t('level')} {userProgress.level}</div>
-      </div>
-
-      {/* Progress Bar */}
-      <div className="bg-slate-800 rounded-xl p-4">
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-slate-300">{t('courseProgress')}</span>
-          <span className="text-blue-400 font-medium">65%</span>
-        </div>
-        <div className="w-full bg-slate-700 rounded-full h-3">
-          <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-300" style={{ width: '65%' }}></div>
-        </div>
-      </div>
-
-      {/* Lesson Categories */}
-      {['Beginner', 'Intermediate', 'Advanced'].map((level) => {
-        const levelKey = level.toLowerCase() + 'Level';
-        return (
-          <div key={level} className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className={`font-bold text-white ${fontSize}`}>{t(levelKey)}</h3>
-              <span className="text-xs text-slate-400">{VOCABULARY[level.toLowerCase()]?.length || 0} words</span>
-            </div>
-
-            <div className="space-y-2">
-              {VOCABULARY[level.toLowerCase()]?.slice(0, 3).map((item, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg hover:bg-slate-700 transition-colors cursor-pointer"
-                  onClick={() => speakText(item.word)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyPress={(e) => e.key === 'Enter' && speakText(item.word)}
-                >
-                  <div>
-                    <div className={`font-medium text-white ${fontSize}`}>{item.word}</div>
-                    <div className={`text-sm text-slate-400 ${currentLanguage.rtl ? 'text-right' : 'text-left'}`}>
-                      {item.translation}
-                    </div>
-                  </div>
-                  <button
-                    className="text-blue-400 hover:text-blue-300"
-                    aria-label={`Play pronunciation for ${item.word}`}
-                  >
-                    <Volume2 size={16} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-
-  const QuizScreen = () => {
-    const [currentQuestion, setCurrentQuestion] = useState(0);
-    const [selectedAnswer, setSelectedAnswer] = useState(null);
-    const [showResult, setShowResult] = useState(false);
-
-    const handleAnswer = useCallback((answerIndex) => {
-      const selectedOption = QUIZ_QUESTIONS[currentQuestion].options[answerIndex];
-      const arabicLang = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(selectedOption) ? 'arabic' : 'english';
-      speakText(selectedOption, arabicLang);
-      setSelectedAnswer(answerIndex);
-      setShowResult(true);
-
-      if (answerIndex === QUIZ_QUESTIONS[currentQuestion].correct) {
-        setQuizScore(prev => prev + 1);
-        setShowConfetti(true);
-        setTimeout(() => setShowConfetti(false), 3000);
-
-        // Update user progress
-        setUserProgress(prev => ({ ...prev, xp: prev.xp + 10 }));
-      }
-    }, [currentQuestion, speakText]);
-
-    const nextQuestion = useCallback(() => {
-      if (currentQuestion < QUIZ_QUESTIONS.length - 1) {
-        setCurrentQuestion(currentQuestion + 1);
-        setSelectedAnswer(null);
-        setShowResult(false);
-      } else {
-        // Quiz completed - could navigate to results screen
-        setCurrentScreen('profile');
-      }
-    }, [currentQuestion]);
-
-    const isArabic = (text) => /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(text);
-
-    const handleTextClick = useCallback((e, text, language) => {
-      e.stopPropagation();
-      speakText(text, language);
-    }, [speakText]);
-
-    const currentQuestionText = QUIZ_QUESTIONS[currentQuestion]?.question;
-
+  const LessonsScreen = () => {
+    const vocab = VOCABULARY.beginner[selectedLanguage] || VOCABULARY.beginner.english;
     return (
       <div className={`space-y-6 ${currentLanguage.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage.rtl ? 'rtl' : 'ltr'}>
-        {showConfetti && (
-          <div className="fixed inset-0 pointer-events-none z-50 flex items-center justify-center">
-            <div className="text-6xl animate-bounce">🎉</div>
-          </div>
-        )}
-
         <div className="flex items-center justify-between">
           <h1 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-lg' ? 'text-2xl' : 'text-3xl'}`}>
-            {t('quizChallenge')}
+            {t('lessons')}
           </h1>
-          <div className="text-blue-400 font-medium">
-            {currentQuestion + 1}/{QUIZ_QUESTIONS.length}
+          <div className="text-blue-400 font-medium">{t('level')} {userProgress.level}</div>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="bg-slate-800 rounded-xl p-4">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-slate-300">{t('courseProgress')}</span>
+            <span className="text-blue-400 font-medium">65%</span>
+          </div>
+          <div className="w-full bg-slate-700 rounded-full h-3">
+            <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-300" style={{ width: '65%' }}></div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6">
-          <div className="mb-6">
-            <div className="w-full bg-slate-700 rounded-full h-2 mb-4">
-              <div
-                className="bg-gradient-to-r from-green-500 to-blue-500 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${((currentQuestion + 1) / QUIZ_QUESTIONS.length) * 100}%` }}
-                role="progressbar"
-                aria-valuenow={(currentQuestion + 1) / QUIZ_QUESTIONS.length * 100}
-                aria-valuemin="0"
-                aria-valuemax="100"
-              ></div>
-            </div>
+        {/* Lesson Categories */}
+        {['Beginner', 'Intermediate', 'Advanced'].map((level) => {
+          const levelKey = level.toLowerCase() + 'Level';
+          const levelVocab = VOCABULARY[level.toLowerCase()][selectedLanguage] || VOCABULARY[level.toLowerCase()].english;
+          return (
+            <div key={level} className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className={`font-bold text-white ${fontSize}`}>{t(levelKey)}</h3>
+                <span className="text-xs text-slate-400">{levelVocab?.length || 0} words</span>
+              </div>
 
-            <button
-              onClick={() => speakText(currentQuestionText, isArabic(currentQuestionText) ? 'arabic' : 'english')}
-              className="flex items-center text-blue-400 mb-4 hover:text-blue-300"
-              aria-label="Speak question"
-            >
-              <Volume2 size={16} className="mr-2" />
-              Speak Question
-            </button>
-
-            <h2
-              className={`font-bold text-white mb-6 cursor-pointer hover:text-blue-300 transition-colors ${fontSize === 'text-sm' ? 'text-lg' : fontSize === 'text-lg' ? 'text-xl' : 'text-2xl'}`}
-              onClick={(e) => handleTextClick(e, currentQuestionText, isArabic(currentQuestionText) ? 'arabic' : 'english')}
-              role="button"
-              tabIndex={0}
-              onKeyPress={(e) => e.key === 'Enter' && handleTextClick(e, currentQuestionText, isArabic(currentQuestionText) ? 'arabic' : 'english')}
-            >
-              {currentQuestionText}
-            </h2>
-
-            <div className="space-y-3">
-              {QUIZ_QUESTIONS[currentQuestion]?.options.map((option, index) => {
-                const optionLang = isArabic(option) ? 'arabic' : 'english';
-                return (
-                  <button
+              <div className="space-y-2">
+                {levelVocab?.slice(0, 3).map((item, index) => (
+                  <div
                     key={index}
-                    onClick={() => !showResult && handleAnswer(index)}
-                    disabled={showResult}
-                    className={`w-full p-4 rounded-xl text-left transition-all ${fontSize} ${showResult
-                      ? index === QUIZ_QUESTIONS[currentQuestion].correct
-                        ? 'bg-green-600 text-white border-2 border-green-400'
-                        : selectedAnswer === index
-                          ? 'bg-red-600 text-white border-2 border-red-400'
-                          : 'bg-slate-700 text-slate-300'
-                      : 'bg-slate-700 text-white hover:bg-slate-600 border-2 border-transparent hover:border-slate-500'
-                      }`}
-                    aria-pressed={selectedAnswer === index}
+                    className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg hover:bg-slate-700 transition-colors cursor-pointer"
+                    onClick={() => speakText(item.word, selectedLanguage)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyPress={(e) => e.key === 'Enter' && speakText(item.word, selectedLanguage)}
                   >
-                    <div className="flex items-center justify-between">
-                      <span
-                        className="cursor-pointer hover:text-blue-300 transition-colors flex-1"
-                        onClick={(e) => handleTextClick(e, option, optionLang)}
-                        role="button"
-                        tabIndex={0}
-                        onKeyPress={(e) => e.key === 'Enter' && handleTextClick(e, option, optionLang)}
-                      >
-                        {option}
-                      </span>
-                      <div className="flex items-center space-x-2">
-                        {showResult && (
-                          <>
-                            {index === QUIZ_QUESTIONS[currentQuestion].correct &&
-                              <Check size={20} className="text-green-400" aria-label="Correct answer" />}
-                            {selectedAnswer === index && index !== QUIZ_QUESTIONS[currentQuestion].correct &&
-                              <X size={20} className="text-red-400" aria-label="Incorrect answer" />}
-                          </>
-                        )}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            speakText(option, optionLang);
-                          }}
-                          className="text-blue-400 hover:text-blue-300 p-1"
-                          aria-label={`Speak ${option}`}
-                        >
-                          <Volume2 size={16} />
-                        </button>
+                    <div>
+                      <div className={`font-medium text-white ${fontSize}`}>{item.word}</div>
+                      <div className={`text-sm text-slate-400 ${currentLanguage.rtl ? 'text-right' : 'text-left'}`}>
+                        {item.translation}
                       </div>
                     </div>
-                  </button>
-                );
-              })}
+                    <button
+                      className="text-blue-400 hover:text-blue-300"
+                      aria-label={`Play pronunciation for ${item.word}`}
+                    >
+                      <Volume2 size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-
-          {showResult && (
-            <div className="text-center">
-              <button
-                onClick={nextQuestion}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-xl font-medium hover:from-blue-500 hover:to-purple-500 transition-all"
-              >
-                {currentQuestion < QUIZ_QUESTIONS.length - 1 ? t('nextQuestion') : t('finishQuiz')}
-              </button>
-            </div>
-          )}
-        </div>
+          );
+        })}
       </div>
     );
   };
 
-  const AICoachScreen = ({ t, selectedLanguage, speakText }) => {
+  const LANG_CODES = {
+    english: 'en-US',
+    arabic: 'ar-SA',
+    dutch: 'nl-NL',
+    indonesian: 'id-ID',
+    malay: 'ms-MY',
+    thai: 'th-TH',
+    khmer: 'km-KH',
+  };
+
+  const QuizScreen = ({ selectedLanguage = "english", onFinish }) => {
+    const [currentQuestion, setCurrentQuestion] = useState(0);
+    const [selectedAnswer, setSelectedAnswer] = useState(null);
+    const [userAnswer, setUserAnswer] = useState("");
+    const [showResult, setShowResult] = useState(false);
+    const [isCurrentCorrect, setIsCurrentCorrect] = useState(false);
+    const [quizScore, setQuizScore] = useState(0);
+
+    // Ensure questions array exists
+    const questions = QUIZ_QUESTIONS[selectedLanguage] || QUIZ_QUESTIONS.english;
+    const currentQuestionObj = questions[currentQuestion];
+    const isQuestionArabic = /[\u0600-\u06FF]/.test(currentQuestionObj.question);
+
+    const handleAnswer = useCallback(
+      (answerIndex) => {
+        if (showResult) return; // prevent multiple clicks
+        setSelectedAnswer(answerIndex);
+        setShowResult(true);
+
+        let isCorrect = false;
+
+        if (currentQuestionObj.type === "true_false") {
+          isCorrect = answerIndex === currentQuestionObj.correct;
+        } else if (currentQuestionObj.type === "multiple_choice") {
+          isCorrect = answerIndex === currentQuestionObj.correct;
+        } else if (currentQuestionObj.type === "fill_blank") {
+          isCorrect = currentQuestionObj.options[answerIndex] === currentQuestionObj.blank;
+        }
+
+        if (isCorrect) {
+          setQuizScore((prev) => prev + 1);
+        }
+        setIsCurrentCorrect(isCorrect);
+
+        // Speak selected answer
+        const answerText = currentQuestionObj.options[answerIndex];
+        const lang = /[\u0600-\u06FF]/.test(answerText) ? "arabic" : selectedLanguage;
+        speakText(answerText, lang);
+      },
+      [currentQuestionObj, selectedLanguage, showResult]
+    );
+
+    const handleShortAnswer = useCallback(() => {
+      if (showResult || !userAnswer.trim()) return;
+      setShowResult(true);
+
+      const correctAnswer = currentQuestionObj.answer.toLowerCase().trim();
+      const userAns = userAnswer.toLowerCase().trim();
+      const isCorrectBool = userAns === correctAnswer;
+
+      setSelectedAnswer(userAnswer);
+      if (isCorrectBool) {
+        setQuizScore((prev) => prev + 1);
+      }
+      setIsCurrentCorrect(isCorrectBool);
+
+      // Speak user's answer
+      const lang = /[\u0600-\u06FF]/.test(userAnswer) ? "arabic" : selectedLanguage;
+      speakText(userAnswer, lang);
+    }, [userAnswer, currentQuestionObj, selectedLanguage, showResult]);
+
+    const nextQuestion = () => {
+      setSelectedAnswer(null);
+      setUserAnswer("");
+      setShowResult(false);
+      setIsCurrentCorrect(false);
+
+      if (currentQuestion < questions.length - 1) {
+        setCurrentQuestion((prev) => prev + 1);
+      } else {
+        // Quiz finished
+        if (onFinish) {
+          onFinish(quizScore, questions.length);
+        }
+
+        // Open another tab (new page)
+        window.location.href = '/profilescreen';
+      }
+    };
+
+
+    if (!currentQuestionObj) return <div>Loading quiz...</div>;
+
+    return (
+      <div className="space-y-6 p-4">
+        <h2 className="text-white text-2xl font-bold">
+          Question {currentQuestion + 1}/{questions.length}
+        </h2>
+        <p
+          className={`text-white text-lg mb-4 ${isQuestionArabic ? "text-right" : "text-left"}`}
+          dir={isQuestionArabic ? "rtl" : "auto"}
+        >
+          {currentQuestionObj.question}
+        </p>
+
+        {currentQuestionObj.type === "short_answer" ? (
+          <div className="space-y-4">
+            <input
+              type="text"
+              value={userAnswer}
+              onChange={(e) => setUserAnswer(e.target.value)}
+              placeholder={
+                isQuestionArabic
+                  ? "اكْتُبْ إِجَابَتَكَ هُنَا..."
+                  : "Enter your answer here..."
+              }
+              className={`w-full p-4 rounded-xl text-white bg-slate-700 border-2 focus:outline-none focus:border-blue-400 ${showResult
+                  ? isCurrentCorrect
+                    ? "border-green-400 bg-green-600"
+                    : "border-red-400 bg-red-600"
+                  : "border-transparent"
+                }`}
+              dir={isQuestionArabic ? "rtl" : "auto"}
+            />
+            {!showResult && (
+              <button
+                onClick={handleShortAnswer}
+                className="w-full px-6 py-3 bg-blue-600 rounded-xl text-white font-medium hover:bg-blue-500"
+              >
+                Submit Answer
+              </button>
+            )}
+            {showResult && (
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  {isCurrentCorrect ? (
+                    <Check className="text-green-400" />
+                  ) : (
+                    <X className="text-red-400" />
+                  )}
+                  <button
+                    onClick={() => {
+                      const lang = /[\u0600-\u06FF]/.test(userAnswer)
+                        ? "arabic"
+                        : selectedLanguage;
+                      speakText(userAnswer, lang);
+                    }}
+                    className="text-blue-400"
+                  >
+                    <Volume2 size={16} />
+                  </button>
+                </div>
+                {!isCurrentCorrect && (
+                  <div className="space-y-2">
+                    <p className="text-green-400 font-medium">
+                      الْإِجَابَةُ الصَّحِيحَةُ: {currentQuestionObj.answer}
+                    </p>
+                    <button
+                      onClick={() => speakText(currentQuestionObj.answer, "arabic")}
+                      className="text-blue-400 flex items-center"
+                    >
+                      <Volume2 size={16} className="mr-1" />
+                      Hear correct answer
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {currentQuestionObj.options.map((option, index) => {
+              const isArabic = /[\u0600-\u06FF]/.test(option);
+              const lang = isArabic ? "arabic" : selectedLanguage;
+
+              return (
+                <button
+                  key={index}
+                  onClick={() => handleAnswer(index)}
+                  disabled={showResult}
+                  className={`w-full p-4 rounded-xl text-white ${isArabic ? "text-right" : "text-left"
+                    } ${showResult
+                      ? index === currentQuestionObj.correct
+                        ? "bg-green-600 border-2 border-green-400"
+                        : selectedAnswer === index
+                          ? "bg-red-600 border-2 border-red-400"
+                          : "bg-slate-700"
+                      : "bg-slate-700 hover:bg-slate-600"
+                    }`}
+                  dir={isArabic ? "rtl" : "auto"}
+                >
+                  <div className="flex justify-between items-center">
+                    <span dir={isArabic ? "rtl" : "auto"}>{option}</span>
+                    {showResult && (
+                      <>
+                        {index === currentQuestionObj.correct && (
+                          <Check className="text-green-400" />
+                        )}
+                        {selectedAnswer === index &&
+                          index !== currentQuestionObj.correct && (
+                            <X className="text-red-400" />
+                          )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            speakText(option, lang);
+                          }}
+                          className="text-blue-400 ml-2"
+                        >
+                          <Volume2 size={16} />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {showResult && (
+          <button
+            onClick={nextQuestion}
+            className="mt-4 px-6 py-3 bg-blue-600 rounded-xl text-white font-medium hover:bg-blue-500"
+          >
+            {currentQuestion < questions.length - 1 ? "Next Question" : "Finish Quiz"}
+          </button>
+        )}
+      </div>
+    );
+  };
+
+
+  const QUIZ_QUESTIONS = {
+    english: [
+      {
+        type: "multiple_choice",
+        question: "What is the capital of France?",
+        options: ["London", "Paris", "Berlin"],
+        correct: 1
+      },
+      {
+        type: "true_false",
+        question: "The Earth is flat.",
+        options: ["True", "False"],
+        correct: 1
+      },
+      {
+        type: "fill_blank",
+        question: "The ___ is shining brightly.",
+        options: ["sun", "moon", "star"],
+        blank: "sun",
+        correct: 0
+      },
+      {
+        type: "short_answer",
+        question: "What is 2 + 2?",
+        answer: "4"
+      },
+      {
+        type: "multiple_choice",
+        question: "What is the largest ocean on Earth?",
+        options: ["Atlantic Ocean", "Pacific Ocean", "Indian Ocean"],
+        correct: 1
+      }
+    ],
+    arabic: [
+      {
+        type: "multiple_choice",
+        question: "مَا هِيْ عَاصِمَةُ فَرْنْسَا؟",
+        options: ["لُنْدُنْ", "بَارِيسْ", "بَرْلِينْ"],
+        correct: 1
+      },
+      {
+        type: "true_false",
+        question: "الْأَرْضُ مُسْطَحَةٌ.",
+        options: ["صَحِيْحٌ", "خَطْأٌ"],
+        correct: 1
+      },
+      {
+        type: "fill_blank",
+        question: "الْـ___ تَلْمَعُ بِشِدَّةٍ.",
+        options: ["شَمْسٌ", "قَمَرٌ", "نَجْمٌ"],
+        blank: "شَمْسٌ",
+        correct: 0
+      },
+      {
+        type: "short_answer",
+        question: "مَا هُوَ ٢ + ٢؟",
+        answer: "٤"
+      },
+      {
+        type: "multiple_choice",
+        question: "مَا هُوَ أَكْبَرُ مُحِيطٍ عَلَى الْأَرْضِ؟",
+        options: ["الْمُحِيطُ الْأَطْلَسِيُّ", "الْمُحِيطُ الْهَادِئُ", "الْمُحِيطُ الْهِنْدِيُّ"],
+        correct: 1
+      }
+    ]
+  };
+
+  const App = () => {
+    const [language, setLanguage] = useState("english");
+    const [quizFinished, setQuizFinished] = useState(false);
+    const [score, setScore] = useState(0);
+
+    const handleFinish = (s, total) => {
+      setScore(`${s}/${total}`);
+      setQuizFinished(true);
+    };
+
+    return (
+      <div className="min-h-screen bg-gray-900 p-4">
+        {!quizFinished ? (
+          <>
+            <div className="mb-4">
+              <label className="text-white mr-2">Select Language:</label>
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                className="p-2 rounded"
+              >
+                <option value="english">English</option>
+                <option value="arabic">Arabic</option>
+              </select>
+            </div>
+            <QuizScreen selectedLanguage={language} onFinish={handleFinish} />
+          </>
+        ) : (
+          <div className="text-white text-2xl">
+            Quiz Finished! Your score: {score}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+
+  const AICoachScreen = ({ t, selectedLanguage, speakText, fontSize }) => {
     const [pronunciationScore, setPronunciationScore] = useState(null);
     const [isRecording, setIsRecording] = useState(false);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -1065,37 +1355,48 @@ const LanguageLearningMVP = () => {
       return maxLen === 0 ? 1 : 1 - distance / maxLen;
     };
 
-    // Simple grammar checker (extendable with external libraries like Grammarly)
+    // Grammar checker extended for multiple languages
     const checkGrammar = (text) => {
       const corrections = [];
       const lowerText = text.toLowerCase();
 
-      // Common English grammar rules
-      if (selectedLanguage === 'english') {
-        if (lowerText.includes('i is')) {
+      const rules = {
+        english: [
+          { pattern: /i is/gi, correction: 'I am', note: 'Use "I am" for first-person singular.' },
+          { pattern: /dont/gi, correction: "don't", note: "Use contraction 'don't' for 'do not'." }
+        ],
+        arabic: [
+          { pattern: /مرحبا/gi, correction: 'مَرْحَبًا', note: 'Add correct vowel markings for proper pronunciation.' }
+        ],
+        dutch: [
+          { pattern: /ik is/gi, correction: 'ik ben', note: 'Use "ik ben" for first-person singular.' }
+        ],
+        // Add for other languages...
+        indonesian: [
+          { pattern: /saya adalah/gi, correction: 'saya', note: 'Simplify to "saya" in casual speech.' }
+        ],
+        malay: [
+          { pattern: /saya adalah/gi, correction: 'saya', note: 'Simplify to "saya" in casual speech.' }
+        ],
+        thai: [
+          { pattern: /ฉันเป็น/gi, correction: 'ฉัน', note: 'Omit "เป็น" in simple statements.' }
+        ],
+        khmer: [
+          { pattern: /ខ្ញុំជា/gi, correction: 'ខ្ញុំ', note: 'Simplify statements.' }
+        ]
+      };
+
+      const langRules = rules[selectedLanguage] || rules.english;
+      langRules.forEach(rule => {
+        if (rule.pattern.test(text)) {
           corrections.push({
-            error: 'i is',
-            correction: 'I am',
-            note: 'Use "I am" for first-person singular.'
+            error: text.match(rule.pattern)[0],
+            correction: text.replace(rule.pattern, rule.correction),
+            note: rule.note
           });
         }
-        if (lowerText.includes('dont')) {
-          corrections.push({
-            error: 'dont',
-            correction: "don't",
-            note: "Use contraction 'don't' for 'do not'."
-          });
-        }
-      } else if (selectedLanguage === 'arabic') {
-        // Simplified Arabic grammar check (mock)
-        if (text.includes('مرحبا')) {
-          corrections.push({
-            error: 'مرحبا',
-            correction: 'مَرْحَبًا',
-            note: 'Add correct vowel markings for proper pronunciation.'
-          });
-        }
-      }
+      });
+
       return corrections;
     };
 
@@ -1108,24 +1409,38 @@ const LanguageLearningMVP = () => {
       else if (score > 70) feedback = 'Good job, but focus on clearer enunciation.';
       else feedback = 'Needs improvement. Try emphasizing each syllable.';
 
-      // Mock phoneme feedback
-      const phonemeFeedback = transcript.toLowerCase().includes('hello')
-        ? 'Great stress on "hello".'
-        : 'Work on stressing the first syllable in "hello".';
+      // Mock phoneme feedback based on language
+      let phonemeFeedback = '';
+      if (selectedLanguage === 'english') {
+        phonemeFeedback = transcript.toLowerCase().includes('hello')
+          ? 'Great stress on "hello".'
+          : 'Work on stressing the first syllable in "hello".';
+      } else if (selectedLanguage === 'arabic') {
+        phonemeFeedback = text.includes('مَرْحَبًا') ? 'Good use of diacritics in pronunciation.' : 'Focus on the harakat (vowels) for clarity.';
+      } // Extend for other languages
 
       return { score, feedback, phonemeFeedback };
     };
 
     useEffect(() => {
-      // Set expected text based on selected language
-      setExpectedText(selectedLanguage === 'arabic' ? 'مَرْحَبًا، كيف حالك؟' : 'Hello, how are you?');
+      // Set expected text based on selected language with vowels for Arabic
+      const expectedTexts = {
+        english: 'Hello, how are you?',
+        arabic: 'مَرْحَبًا، كَيْفَ حَالُكَ؟', // With full diacritics
+        dutch: 'Hallo, hoe gaat het?',
+        indonesian: 'Halo, apa kabar?',
+        malay: 'Hello, apa khabar?',
+        thai: 'สวัสดี คุณสบายดีไหม?',
+        khmer: 'សួស្តី អ្នកសប្បាយជាដើម្បីទេ?'
+      };
+      setExpectedText(expectedTexts[selectedLanguage] || expectedTexts.english);
 
-      // Initialize SpeechRecognition
+      // Initialize SpeechRecognition with language support
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (SpeechRecognition) {
         recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.continuous = true; // Enable continuous recognition
-        recognitionRef.current.interimResults = true; // Enable interim results for real-time
+        recognitionRef.current.continuous = true;
+        recognitionRef.current.interimResults = true;
         const langMap = {
           arabic: 'ar-SA',
           dutch: 'nl-NL',
@@ -1150,7 +1465,6 @@ const LanguageLearningMVP = () => {
           }
           setLiveTranscript(interimTranscript || finalTranscript);
 
-          // Real-time grammar and pronunciation analysis
           if (finalTranscript) {
             const grammar = checkGrammar(finalTranscript);
             setGrammarCorrections(grammar);
@@ -1217,18 +1531,18 @@ const LanguageLearningMVP = () => {
         setTimeout(() => {
           setIsRecording(false);
           setIsAnalyzing(true);
-          setLiveTranscript('Hello, how are you?');
+          setLiveTranscript(expectedText);
           setTimeout(() => {
-            const grammar = checkGrammar('Hello, how are you?');
+            const grammar = checkGrammar(expectedText);
             setGrammarCorrections(grammar);
-            const pronunciation = analyzePronunciation('Hello, how are you?');
+            const pronunciation = analyzePronunciation(expectedText);
             setPronunciationScore(pronunciation);
             setPronunciationFeedback(pronunciation.phonemeFeedback);
             setIsAnalyzing(false);
           }, 2000);
         }, 3000);
       }
-    }, []);
+    }, [expectedText]);
 
     const stopRecording = useCallback(() => {
       if (recognitionRef.current) {
@@ -1651,16 +1965,17 @@ const LanguageLearningMVP = () => {
     </div>
   );
 
-  // Placement Test Screen
+  // Placement Test Screen (updated for multi-lang)
   const PlacementTestScreen = () => {
     const [testStep, setTestStep] = useState(0);
     const [testResults, setTestResults] = useState(null);
 
+    const questions = PLACEMENT_QUESTIONS[selectedLanguage] || PLACEMENT_QUESTIONS.english;
+
     const handleTestAnswer = useCallback((answerIndex) => {
-      if (testStep < PLACEMENT_QUESTIONS.length - 1) {
+      if (testStep < questions.length - 1) {
         setTestStep(testStep + 1);
       } else {
-        // Calculate results based on answers
         const level = ['Beginner', 'Intermediate', 'Advanced'][Math.floor(Math.random() * 3)];
         const score = Math.floor(Math.random() * 30) + 70;
         setTestResults({ level, score });
@@ -1681,30 +1996,30 @@ const LanguageLearningMVP = () => {
             <div className="mb-6">
               <div className="flex justify-between text-sm text-slate-400 mb-2">
                 <span>{t('question')} {testStep + 1}</span>
-                <span>{testStep + 1}/{PLACEMENT_QUESTIONS.length}</span>
+                <span>{testStep + 1}/{questions.length}</span>
               </div>
               <div className="w-full bg-slate-700 rounded-full h-2">
                 <div
                   className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${((testStep + 1) / PLACEMENT_QUESTIONS.length) * 100}%` }}
+                  style={{ width: `${((testStep + 1) / questions.length) * 100}%` }}
                   role="progressbar"
-                  aria-valuenow={(testStep + 1) / PLACEMENT_QUESTIONS.length * 100}
+                  aria-valuenow={(testStep + 1) / questions.length * 100}
                   aria-valuemin="0"
                   aria-valuemax="100"
                 ></div>
               </div>
             </div>
 
-            {PLACEMENT_QUESTIONS[testStep] && (
+            {questions[testStep] && (
               <div>
                 <h3 className={`font-bold text-white mb-6 ${fontSize === 'text-sm' ? 'text-lg' : fontSize === 'text-lg' ? 'text-xl' : 'text-2xl'}`}>
-                  {PLACEMENT_QUESTIONS[testStep].question}
+                  {questions[testStep].question}
                 </h3>
 
-                {PLACEMENT_QUESTIONS[testStep].type === 'listening' && (
+                {questions[testStep].type === 'listening' && (
                   <div className="text-center mb-6">
                     <button
-                      onClick={() => speakText('Hello')}
+                      onClick={() => speakText('Hello', selectedLanguage)}
                       className="bg-blue-600 text-white p-4 rounded-full hover:bg-blue-500 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
                       aria-label="Play audio sample"
                     >
@@ -1715,7 +2030,7 @@ const LanguageLearningMVP = () => {
                 )}
 
                 <div className="space-y-3">
-                  {PLACEMENT_QUESTIONS[testStep].options.map((option, index) => (
+                  {questions[testStep].options.map((option, index) => (
                     <button
                       key={index}
                       onClick={() => handleTestAnswer(index)}
@@ -1748,10 +2063,6 @@ const LanguageLearningMVP = () => {
     );
   };
 
-  // Teacher Integration Screen
-
-
-
   const TeacherScreen = () => {
     const [isLiveSession, setIsLiveSession] = useState(false);
     const [isChatOpen, setIsChatOpen] = useState(false);
@@ -1759,7 +2070,6 @@ const LanguageLearningMVP = () => {
       { id: 1, text: 'Hello! How can I assist you today?', sender: 'teacher', timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
     ]);
     const [newMessage, setNewMessage] = useState('');
-    const fontSize = 'text-base'; // Default font size
 
     // Handle sending a message
     const handleSendMessage = (e) => {
@@ -1878,8 +2188,8 @@ const LanguageLearningMVP = () => {
                   >
                     <div
                       className={`max-w-[70%] p-3 rounded-lg ${message.sender === 'user'
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-slate-700 text-slate-200'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-slate-700 text-slate-200'
                         }`}
                     >
                       <p className="text-sm">{message.text}</p>
@@ -1927,7 +2237,7 @@ const LanguageLearningMVP = () => {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs bg-red-600 text-white px-2 py-1 rounded">{item.type}</span>
                   <button
-                    onClick={() => speakText(item.correction)}
+                    onClick={() => speakText(item.correction, selectedLanguage)}
                     className="text-blue-400 hover:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
                     aria-label={`Play pronunciation for: ${item.correction}`}
                   >
