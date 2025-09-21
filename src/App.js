@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import TextToSpeech from "./TextToSpeech";
 import Quiz from "./quiz.js";
+import QuizScreenEnhanced from "./components/QuizScreenEnhanced";
 
 import {
   Volume2,
@@ -717,18 +718,20 @@ const LanguageLearningMVP = () => {
   ], [t]);
 
 
-  // Enhanced TTS function using Web Speech API with Google voices (best client-side approximation for Google TTS)
-  // For full Google TTS, consider integrating responsivevoice.org or a server-side proxy with Google Cloud TTS API
-  // Here, we prioritize voices with 'Google' in name for Arabic with diacritics support
-  const speakText = useCallback((text, lang = 'en') => {
+  // Enhanced TTS function using Google TTS service with fallback
+  const speakText = useCallback(async (text, lang = 'english', options = {}) => {
     try {
+      // Import the enhanced TTS function
+      const { default: enhancedSpeakText } = await import('./TextToSpeech');
+      return await enhancedSpeakText(text, lang, options);
+    } catch (error) {
+      console.error('TTS Error:', error);
+      // Fallback to basic Web Speech API
       if ('speechSynthesis' in window) {
         speechSynthesis.cancel();
-
         const utterance = new SpeechSynthesisUtterance(text);
-
         const langMap = {
-          arabic: 'ar-SA', // Supports diacritics (vowels) with Google voices
+          arabic: 'ar-SA',
           dutch: 'nl-NL',
           indonesian: 'id-ID',
           malay: 'ms-MY',
@@ -736,25 +739,11 @@ const LanguageLearningMVP = () => {
           khmer: 'km-KH',
           english: 'en-US'
         };
-
         utterance.lang = langMap[lang] || langMap[selectedLanguage] || 'en-US';
-        utterance.rate = 0.8;
-        utterance.pitch = 1;
-
-        // Prefer Google voices for better quality and diacritic support
-        const voices = speechSynthesis.getVoices();
-        const googleVoice = voices.find(voice => voice.name.includes('Google') && voice.lang === utterance.lang);
-        if (googleVoice) {
-          utterance.voice = googleVoice;
-        }
-
+        utterance.rate = options.rate || 0.8;
+        utterance.pitch = options.pitch || 1;
         speechSynthesis.speak(utterance);
-      } else {
-        // Fallback: Log for server-side Google TTS integration if needed
-        console.log('Web Speech not supported. Integrate Google Cloud TTS via API.');
       }
-    } catch (error) {
-      console.error('TTS Error:', error);
     }
   }, [selectedLanguage]);
 
@@ -984,17 +973,22 @@ const LanguageLearningMVP = () => {
   };
 
   const QuizScreen = ({ selectedLanguage = "english", onFinish }) => {
-    const [currentQuestion, setCurrentQuestion] = useState(0);
-    const [selectedAnswer, setSelectedAnswer] = useState(null);
-    const [userAnswer, setUserAnswer] = useState("");
-    const [showResult, setShowResult] = useState(false);
-    const [isCurrentCorrect, setIsCurrentCorrect] = useState(false);
-    const [quizScore, setQuizScore] = useState(0);
+    const [useEnhancedQuiz, setUseEnhancedQuiz] = useState(true);
+    const [quizFinished, setQuizFinished] = useState(false);
+    const [finalScore, setFinalScore] = useState(null);
+    const [quizStarted, setQuizStarted] = useState(false);
 
-    // Ensure questions array exists
-    const questions = QUIZ_QUESTIONS[selectedLanguage] || QUIZ_QUESTIONS.english;
-    const currentQuestionObj = questions[currentQuestion];
-    const isQuestionArabic = /[\u0600-\u06FF]/.test(currentQuestionObj.question);
+    const handleQuizFinish = (score, total, timeSpent) => {
+      setFinalScore({ score, total, timeSpent });
+      setQuizFinished(true);
+      if (onFinish) {
+        onFinish(score, total);
+      }
+    };
+
+    const handleQuestionComplete = (questionIndex, isCorrect, answer) => {
+      console.log(`Question ${questionIndex + 1}: ${isCorrect ? 'Correct' : 'Incorrect'} - ${answer}`);
+    };
 
     const handleAnswer = useCallback(
       (answerIndex) => {
@@ -1423,16 +1417,16 @@ const LanguageLearningMVP = () => {
     };
 
     useEffect(() => {
-      // Set expected text based on selected language with vowels for Arabic
-      const expectedTexts = {
-        english: 'Hello, how are you?',
-        arabic: 'مَرْحَبًا، كَيْفَ حَالُكَ؟', // With full diacritics
-        dutch: 'Hallo, hoe gaat het?',
-        indonesian: 'Halo, apa kabar?',
-        malay: 'Hello, apa khabar?',
-        thai: 'สวัสดี คุณสบายดีไหม?',
-        khmer: 'សួស្តី អ្នកសប្បាយជាដើម្បីទេ?'
-      };
+        // Set expected text based on selected language with vowels for Arabic
+        const expectedTexts = {
+          english: 'Hello, how are you today?',
+          arabic: 'مَرْحَبًا، كَيْفَ حَالُكَ الْيَوْمَ؟', // With full diacritics
+          dutch: 'Hallo, hoe gaat het vandaag?',
+          indonesian: 'Halo, apa kabar hari ini?',
+          malay: 'Hello, apa khabar hari ini?',
+          thai: 'สวัสดี คุณสบายดีไหมวันนี้?',
+          khmer: 'សួស្តី អ្នកសប្បាយជាដើម្បីទេថ្ងៃនេះ?'
+        };
       setExpectedText(expectedTexts[selectedLanguage] || expectedTexts.english);
 
       // Initialize SpeechRecognition with language support
@@ -2066,10 +2060,60 @@ const LanguageLearningMVP = () => {
   const TeacherScreen = () => {
     const [isLiveSession, setIsLiveSession] = useState(false);
     const [isChatOpen, setIsChatOpen] = useState(false);
+    const [isVoiceCallActive, setIsVoiceCallActive] = useState(false);
+    const [isRecording, setIsRecording] = useState(false);
     const [messages, setMessages] = useState([
       { id: 1, text: 'Hello! How can I assist you today?', sender: 'teacher', timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
     ]);
     const [newMessage, setNewMessage] = useState('');
+    const [selectedTopic, setSelectedTopic] = useState('');
+    const [difficultyLevel, setDifficultyLevel] = useState('beginner');
+    const [isTyping, setIsTyping] = useState(false);
+
+    // AI Teacher responses based on context
+    const getAIResponse = (userMessage) => {
+      const message = userMessage.toLowerCase();
+      
+      // Language learning responses
+      if (message.includes('hello') || message.includes('hi')) {
+        return `Hello! I'm Ms. Sarah, your AI language teacher. I'm here to help you learn ${selectedLanguage === 'arabic' ? 'Arabic' : selectedLanguage}. What would you like to practice today?`;
+      }
+      
+      if (message.includes('grammar') || message.includes('grammatical')) {
+        return `Great! Let's work on grammar. In ${selectedLanguage === 'arabic' ? 'Arabic' : selectedLanguage}, we can practice verb conjugations, sentence structure, and more. What specific grammar topic interests you?`;
+      }
+      
+      if (message.includes('pronunciation') || message.includes('pronounce')) {
+        return `Pronunciation is crucial! Let's practice together. I can help you with ${selectedLanguage === 'arabic' ? 'Arabic diacritics and sounds' : 'phonetics and accent'}. Try saying a word and I'll give you feedback!`;
+      }
+      
+      if (message.includes('vocabulary') || message.includes('words')) {
+        return `Excellent! Building vocabulary is key to fluency. Let's learn some new ${selectedLanguage === 'arabic' ? 'Arabic' : selectedLanguage} words. What topic would you like to focus on?`;
+      }
+      
+      if (message.includes('difficult') || message.includes('hard')) {
+        return `Don't worry! Learning a new language takes time. Let's break it down into smaller, manageable steps. What specific part is challenging you?`;
+      }
+      
+      if (message.includes('practice') || message.includes('exercise')) {
+        return `Perfect! Practice makes perfect. I can create custom exercises for you. What skill would you like to practice: speaking, listening, reading, or writing?`;
+      }
+      
+      if (message.includes('test') || message.includes('quiz')) {
+        return `Great idea! Testing helps track progress. I can create a personalized quiz for your level. What topics should I include?`;
+      }
+      
+      // Default responses
+      const responses = [
+        `That's interesting! Tell me more about what you'd like to learn in ${selectedLanguage === 'arabic' ? 'Arabic' : selectedLanguage}.`,
+        `I'm here to help! What specific aspect of ${selectedLanguage === 'arabic' ? 'Arabic' : selectedLanguage} would you like to work on?`,
+        `Great question! Let's explore that together. Can you give me more details?`,
+        `I understand! Learning ${selectedLanguage === 'arabic' ? 'Arabic' : selectedLanguage} can be challenging. Let's tackle this step by step.`,
+        `Excellent! I'm excited to help you improve. What's your main goal today?`
+      ];
+      
+      return responses[Math.floor(Math.random() * responses.length)];
+    };
 
     // Handle sending a message
     const handleSendMessage = (e) => {
@@ -2084,18 +2128,41 @@ const LanguageLearningMVP = () => {
         setMessages([...messages, newMsg]);
         setNewMessage('');
 
-        // Simulate teacher response
+        // Show typing indicator
+        setIsTyping(true);
+
+        // Simulate AI teacher response
         setTimeout(() => {
+          setIsTyping(false);
+          const aiResponse = getAIResponse(newMessage);
           setMessages((prev) => [
             ...prev,
             {
               id: prev.length + 1,
-              text: 'Thank you for your message! How can I help you further?',
+              text: aiResponse,
               sender: 'teacher',
               timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             },
           ]);
-        }, 1000);
+        }, 1500);
+      }
+    };
+
+    // Handle voice call
+    const handleVoiceCall = () => {
+      setIsVoiceCallActive(!isVoiceCallActive);
+      if (!isVoiceCallActive) {
+        // Start voice call simulation
+        speakText("Hello! I'm ready to help you practice speaking. Please say something in " + selectedLanguage, selectedLanguage);
+      }
+    };
+
+    // Handle voice recording
+    const handleVoiceRecording = () => {
+      setIsRecording(!isRecording);
+      if (!isRecording) {
+        // Start recording simulation
+        speakText("I'm listening. Please speak now.", selectedLanguage);
       }
     };
 
@@ -2104,6 +2171,35 @@ const LanguageLearningMVP = () => {
       if (e.target.id === 'chat-overlay') {
         setIsChatOpen(false);
       }
+    };
+
+    // Quick action buttons
+    const quickActions = [
+      { id: 'grammar', text: 'Grammar Help', icon: '📚' },
+      { id: 'pronunciation', text: 'Pronunciation', icon: '🎤' },
+      { id: 'vocabulary', text: 'Vocabulary', icon: '📖' },
+      { id: 'practice', text: 'Practice', icon: '💪' },
+      { id: 'quiz', text: 'Take Quiz', icon: '📝' },
+      { id: 'conversation', text: 'Conversation', icon: '💬' }
+    ];
+
+    const handleQuickAction = (action) => {
+      const actionMessages = {
+        grammar: "Let's work on grammar! What specific grammar topic would you like to practice?",
+        pronunciation: "Great! Let's practice pronunciation. Try saying some words and I'll help you improve.",
+        vocabulary: "Excellent! Let's expand your vocabulary. What topic interests you?",
+        practice: "Perfect! Let's practice together. What skill would you like to work on?",
+        quiz: "Great idea! I can create a personalized quiz for you. What level are you at?",
+        conversation: "Wonderful! Let's have a conversation in " + selectedLanguage + ". What would you like to talk about?"
+      };
+      
+      const newMsg = {
+        id: messages.length + 1,
+        text: actionMessages[action],
+        sender: 'teacher',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+      setMessages([...messages, newMsg]);
     };
 
     return (
@@ -2153,11 +2249,56 @@ const LanguageLearningMVP = () => {
                 <MessageCircle className="mx-auto mb-1" size={20} />
                 <span className="text-sm">Chat</span>
               </button>
-              <button className="p-3 bg-purple-800/50 text-purple-200 rounded-xl hover:bg-purple-700/50 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-400">
+              <button 
+                onClick={handleVoiceCall}
+                className={`p-3 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-purple-400 ${
+                  isVoiceCallActive 
+                    ? 'bg-red-600 text-white' 
+                    : 'bg-purple-800/50 text-purple-200 hover:bg-purple-700/50'
+                }`}
+              >
                 <Mic className="mx-auto mb-1" size={20} />
-                <span className="text-sm">Voice Call</span>
+                <span className="text-sm">{isVoiceCallActive ? 'End Call' : 'Voice Call'}</span>
               </button>
             </div>
+
+            {/* Quick Actions */}
+            <div className="mt-6">
+              <h4 className="text-white font-medium mb-3 text-center">Quick Actions</h4>
+              <div className="grid grid-cols-2 gap-2">
+                {quickActions.map((action) => (
+                  <button
+                    key={action.id}
+                    onClick={() => handleQuickAction(action.id)}
+                    className="p-2 bg-slate-700/50 text-slate-200 rounded-lg hover:bg-slate-600/50 transition-colors text-xs"
+                  >
+                    <span className="text-lg mb-1 block">{action.icon}</span>
+                    <span>{action.text}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Voice Recording */}
+            {isVoiceCallActive && (
+              <div className="mt-4 p-4 bg-slate-700/30 rounded-xl">
+                <div className="text-center">
+                  <button
+                    onClick={handleVoiceRecording}
+                    className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-2 transition-all ${
+                      isRecording 
+                        ? 'bg-red-500 animate-pulse' 
+                        : 'bg-green-500 hover:bg-green-400'
+                    }`}
+                  >
+                    {isRecording ? <MicOff size={24} /> : <Mic size={24} />}
+                  </button>
+                  <p className="text-slate-300 text-sm">
+                    {isRecording ? 'Recording... Speak now' : 'Click to start recording'}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -2197,6 +2338,19 @@ const LanguageLearningMVP = () => {
                     </div>
                   </div>
                 ))}
+                
+                {/* Typing indicator */}
+                {isTyping && (
+                  <div className="flex justify-start">
+                    <div className="bg-slate-700 text-slate-200 p-3 rounded-lg">
+                      <div className="flex space-x-1">
+                        <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                        <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
               <form onSubmit={handleSendMessage} className="p-4 border-t border-slate-700">
                 <div className="flex items-center space-x-2">
@@ -2294,7 +2448,7 @@ const LanguageLearningMVP = () => {
     switch (currentScreen) {
       case 'home': return <HomeScreen />;
       case 'lessons': return <LessonsScreen />;
-      case 'quiz': return <QuizScreen />;
+      case 'quiz': return <QuizScreenEnhanced selectedLanguage={selectedLanguage} onFinish={(score, total) => setQuizScore(score)} />;
       case 'ai-coach': return <AICoachScreen t={t} selectedLanguage={selectedLanguage} speakText={speakText} fontSize={fontSize} />;
       case 'profile': return <ProfileScreen />;
       case 'settings': return <SettingsScreen />;
