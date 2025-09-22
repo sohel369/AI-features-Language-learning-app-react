@@ -47,6 +47,8 @@ class GoogleTTSService {
     const languageMap = {
       english: 'en-US',
       arabic: 'ar-SA',
+      french: 'fr-FR',
+      spanish: 'es-ES',
       dutch: 'nl-NL',
       indonesian: 'id-ID',
       malay: 'ms-MY',
@@ -76,24 +78,70 @@ class GoogleTTSService {
 
   // Enhanced text processing for Arabic with diacritics
   processArabicText(text) {
-    // Ensure proper Arabic text with diacritics
+    // Check if text already has diacritics
+    if (this.hasDiacritics(text)) {
+      return text; // Return as-is if diacritics are present
+    }
+
+    // Enhanced Arabic diacritics mapping for better pronunciation
     const arabicDiacritics = {
+      // Basic letters with fatha (َ)
       'ا': 'اَ', 'ب': 'بَ', 'ت': 'تَ', 'ث': 'ثَ', 'ج': 'جَ', 'ح': 'حَ', 'خ': 'خَ',
       'د': 'دَ', 'ذ': 'ذَ', 'ر': 'رَ', 'ز': 'زَ', 'س': 'سَ', 'ش': 'شَ', 'ص': 'صَ',
       'ض': 'ضَ', 'ط': 'طَ', 'ظ': 'ظَ', 'ع': 'عَ', 'غ': 'غَ', 'ف': 'فَ', 'ق': 'قَ',
-      'ك': 'كَ', 'ل': 'لَ', 'م': 'مَ', 'ن': 'نَ', 'ه': 'هَ', 'و': 'وَ', 'ي': 'يَ'
+      'ك': 'كَ', 'ل': 'لَ', 'م': 'مَ', 'ن': 'نَ', 'ه': 'هَ', 'و': 'وَ', 'ي': 'يَ',
+      
+      // Common words with proper diacritics
+      'السلام': 'السَّلَامُ', 'عليكم': 'عَلَيْكُمْ', 'ورحمة': 'وَرَحْمَةُ',
+      'الله': 'اللَّهُ', 'وبركاته': 'وَبَرَكَاتُهُ', 'مرحبا': 'مَرْحَبًا',
+      'شكرا': 'شُكْرًا', 'عفوا': 'عَفْوًا', 'نعم': 'نَعَمْ', 'لا': 'لَا',
+      'أهلا': 'أَهْلًا', 'وسهلا': 'وَسَهْلًا', 'كيف': 'كَيْفَ', 'حال': 'حَالُ',
+      'أنت': 'أَنْتَ', 'أنا': 'أَنَا', 'هو': 'هُوَ', 'هي': 'هِيَ',
+      
+      // Additional common phrases with proper diacritics
+      'صباح': 'صَبَاحُ', 'مساء': 'مَسَاءُ', 'الخير': 'الْخَيْرُ',
+      'كيف حالك': 'كَيْفَ حَالُكَ', 'أنا بخير': 'أَنَا بِخَيْرٍ',
+      'شكرا لك': 'شُكْرًا لَكَ', 'عفوا': 'عَفْوًا', 'مع السلامة': 'مَعَ السَّلَامَةِ',
+      'أهلا وسهلا': 'أَهْلًا وَسَهْلًا', 'كيف الحال': 'كَيْفَ الْحَالُ',
+      'أنا سعيد': 'أَنَا سَعِيدٌ', 'أنا حزين': 'أَنَا حَزِينٌ',
+      'أنا جائع': 'أَنَا جَائِعٌ', 'أنا عطشان': 'أَنَا عَطْشَانٌ',
+      'أنا متعب': 'أَنَا مُتْعَبٌ', 'أنا سعيد': 'أَنَا سَعِيدٌ'
     };
 
-    // Add basic diacritics if missing (simplified approach)
+    // Process common words first
     let processedText = text;
-    if (this.getLanguageCode('arabic') === 'ar-SA' && !this.hasDiacritics(text)) {
-      // This is a simplified approach - in production, you'd want more sophisticated processing
-      processedText = text.split('').map(char => 
-        arabicDiacritics[char] || char
-      ).join('');
-    }
+    Object.keys(arabicDiacritics).forEach(word => {
+      const regex = new RegExp(word, 'g');
+      processedText = processedText.replace(regex, arabicDiacritics[word]);
+    });
+
+    // For remaining characters, add basic fatha if they don't have diacritics
+    processedText = processedText.split('').map(char => {
+      if (arabicDiacritics[char]) {
+        return arabicDiacritics[char];
+      }
+      // Add fatha to Arabic letters that don't have diacritics
+      if (/[\u0600-\u06FF]/.test(char) && !this.hasDiacritics(char)) {
+        return char + '\u064E'; // Add fatha
+      }
+      return char;
+    }).join('');
 
     return processedText;
+  }
+
+  // Process Thai text for better pronunciation
+  processThaiText(text) {
+    // Thai doesn't need diacritics processing like Arabic, but we can add tone markers
+    // This is a simplified approach - in production you'd want more sophisticated processing
+    return text;
+  }
+
+  // Process Khmer text for better pronunciation
+  processKhmerText(text) {
+    // Khmer doesn't need diacritics processing like Arabic, but we can add vowel markers
+    // This is a simplified approach - in production you'd want more sophisticated processing
+    return text;
   }
 
   // Check if Arabic text has diacritics
@@ -126,6 +174,10 @@ class GoogleTTSService {
       let processedText = text;
       if (languageCode === 'ar-SA') {
         processedText = this.processArabicText(text);
+      } else if (languageCode === 'th-TH') {
+        processedText = this.processThaiText(text);
+      } else if (languageCode === 'km-KH') {
+        processedText = this.processKhmerText(text);
       }
 
       // Prepare the request

@@ -5,6 +5,8 @@ import googleTTSService from './services/GoogleTTSService';
 const LANGUAGE_MAP = {
   english: 'en-US',
   arabic: 'ar-SA',
+  french: 'fr-FR',
+  spanish: 'es-ES',
   dutch: 'nl-NL',
   indonesian: 'id-ID',
   malay: 'ms-MY',
@@ -28,6 +30,50 @@ const speakText = async (text, language = "english", options = {}) => {
   }
 };
 
+// Simple Arabic helpers for diacritics when using Web Speech fallback
+const hasArabicDiacritics = (input) => /[\u064B-\u0652\u0670\u0640]/.test(input);
+const applyBasicArabicDiacritics = (input) => {
+  // Common phrase replacements to improve pronunciation
+  const common = {
+    'السلام عليكم': 'السَّلَامُ عَلَيْكُمْ',
+    'ورحمة الله وبركاته': 'وَرَحْمَةُ اللَّهِ وَبَرَكَاتُهُ',
+    'مرحبا': 'مَرْحَبًا',
+    'أهلا وسهلا': 'أَهْلًا وَسَهْلًا',
+    'شكرا': 'شُكْرًا',
+    'عفوا': 'عَفْوًا',
+    'نعم': 'نَعَمْ',
+    'لا': 'لَا',
+    'كيف حالك': 'كَيْفَ حَالُكَ',
+    'أنا بخير': 'أَنَا بِخَيْرٍ',
+    'مع السلامة': 'مَعَ السَّلَامَةِ'
+  };
+  let out = input;
+  Object.keys(common).forEach(key => { out = out.replace(new RegExp(key, 'g'), common[key]); });
+  if (hasArabicDiacritics(out)) return out;
+  // Add basic fatha to bare Arabic letters as a light aid (very naive)
+  return out.split('').map(ch => (/^[\u0600-\u06FF]$/.test(ch) ? ch + '\u064E' : ch)).join('');
+};
+
+// Wait until voices are loaded in the browser
+const waitForVoices = () => new Promise((resolve) => {
+  const voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+  if (voices && voices.length > 0) {
+    resolve(voices);
+    return;
+  }
+  const id = setInterval(() => {
+    const list = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+    if (list && list.length > 0) {
+      clearInterval(id);
+      resolve(list);
+    }
+  }, 100);
+  setTimeout(() => {
+    clearInterval(id);
+    resolve(window.speechSynthesis ? window.speechSynthesis.getVoices() : []);
+  }, 2000);
+});
+
 // Fallback to Web Speech API with enhanced voice selection
 const fallbackToWebSpeech = (text, language, options = {}) => {
   if (!('speechSynthesis' in window)) {
@@ -35,8 +81,11 @@ const fallbackToWebSpeech = (text, language, options = {}) => {
     return null;
   }
 
-  const utterance = new SpeechSynthesisUtterance(text);
+  // If Arabic, lightly enrich text with diacritics for better vowels
   const languageCode = LANGUAGE_MAP[language] || 'en-US';
+  const processedText = languageCode === 'ar-SA' ? applyBasicArabicDiacritics(String(text || '')) : text;
+
+  const utterance = new SpeechSynthesisUtterance(processedText);
   
   utterance.lang = languageCode;
   utterance.rate = options.rate || 0.8;
@@ -44,20 +93,20 @@ const fallbackToWebSpeech = (text, language, options = {}) => {
   utterance.volume = options.volume || 1.0;
 
   // Enhanced voice selection for better quality
-  const voices = speechSynthesis.getVoices();
-  const preferredVoice = voices.find(voice => {
-    const isCorrectLanguage = voice.lang === languageCode;
-    const isGoogleVoice = voice.name.includes('Google') || voice.name.includes('Neural');
-    const isHighQuality = voice.name.includes('Wavenet') || voice.name.includes('Standard');
-    
-    return isCorrectLanguage && (isGoogleVoice || isHighQuality);
+  waitForVoices().then((voices) => {
+    // Prefer exact lang match, then any Arabic voice if Arabic requested
+    let preferredVoice = voices.find(v => v.lang === languageCode && (v.name.includes('Google') || v.name.includes('Neural') || v.name.includes('Wavenet') || v.name.includes('Standard')));
+    if (!preferredVoice && languageCode === 'ar-SA') {
+      preferredVoice = voices.find(v => v.lang?.toLowerCase().startsWith('ar')) || null;
+    }
+    if (!preferredVoice) {
+      preferredVoice = voices.find(v => v.lang === languageCode) || null;
+    }
+    if (preferredVoice) utterance.voice = preferredVoice;
+    speechSynthesis.speak(utterance);
+  }).catch(() => {
+    speechSynthesis.speak(utterance);
   });
-
-  if (preferredVoice) {
-    utterance.voice = preferredVoice;
-  }
-
-  speechSynthesis.speak(utterance);
   return utterance;
 };
 

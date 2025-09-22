@@ -2,6 +2,13 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import TextToSpeech from "./TextToSpeech";
 import Quiz from "./quiz.js";
 import QuizScreenEnhanced from "./components/QuizScreenEnhanced";
+import AuthForm from "./components/AuthForm";
+import LanguageSelection from "./components/LanguageSelection";
+import authService from "./services/AuthService";
+import databaseService from "./services/DatabaseService";
+import ProtectedRoute from "./components/protectroute";
+import { getAuth } from "firebase/auth";
+
 
 import {
   Volume2,
@@ -28,9 +35,16 @@ import {
 } from 'lucide-react';
 
 // Move static data outside component to prevent recreation on renders
-const LANGUAGES = {
+const LEARNING_LANGUAGES = {
+  english: { name: 'English', flag: '🇺🇸', rtl: false },
+  arabic: { name: 'العربية', flag: '🇸🇦', rtl: true }
+};
+
+const INTERFACE_LANGUAGES = {
   english: { name: 'English', flag: '🇺🇸', rtl: false },
   arabic: { name: 'العربية', flag: '🇸🇦', rtl: true },
+  french: { name: 'Français', flag: '🇫🇷', rtl: false },
+  spanish: { name: 'Español', flag: '🇪🇸', rtl: false },
   dutch: { name: 'Nederlands', flag: '🇳🇱', rtl: false },
   indonesian: { name: 'Bahasa Indonesia', flag: '🇮🇩', rtl: false },
   malay: { name: 'Bahasa Melayu', flag: '🇲🇾', rtl: false },
@@ -570,6 +584,152 @@ const TRANSLATIONS = {
     fillBlank: 'បំពេញទទេ:',
     matchPairs: 'ផ្គូផ្គង:',
     trueFalse: 'ពិត ឬមិនពិត:'
+  },
+  french: {
+    welcomeBack: 'Bon retour ! 👋',
+    readyToContinue: 'Prêt à continuer à apprendre ?',
+    dayStreak: 'Série de jours',
+    totalXP: 'XP total',
+    level: 'Niveau',
+    selectLanguage: 'Sélectionner la langue',
+    continueLesson: 'Continuer la leçon',
+    aiCoach: 'Coach IA',
+    lessons: 'Leçons',
+    courseProgress: 'Progrès du cours',
+    beginnerLevel: 'Niveau débutant',
+    intermediateLevel: 'Niveau intermédiaire',
+    advancedLevel: 'Niveau avancé',
+    quizChallenge: 'Défi quiz',
+    nextQuestion: 'Question suivante',
+    finishQuiz: 'Terminer le quiz',
+    aiLanguageCoach: 'Coach linguistique IA',
+    pronunciationCoach: 'Coach de prononciation',
+    say: 'Dites : ',
+    analyzingPronunciation: 'L\'IA analyse votre prononciation...',
+    chatWithAiTutor: 'Chatter avec le tuteur IA',
+    askAboutLearning: 'Demandez-moi n\'importe quoi sur l\'apprentissage des langues...',
+    send: 'Envoyer',
+    profile: 'Profil',
+    achievements: 'Réalisations',
+    weeklyLeaderboard: 'Classement hebdomadaire',
+    settings: 'Paramètres',
+    accessibility: 'Accessibilité',
+    fontSize: 'Taille de police',
+    highContrast: 'Contraste élevé',
+    captions: 'Sous-titres',
+    languagePreferences: 'Préférences linguistiques',
+    interfaceLanguage: 'Langue de l\'interface',
+    autoPlayAudio: 'Lecture automatique audio',
+    notifications: 'Notifications',
+    dailyReminders: 'Rappels quotidiens',
+    achievementAlerts: 'Alertes de réussite',
+    streakWarnings: 'Avertissements de série',
+    account: 'Compte',
+    privacyPolicy: 'Politique de confidentialité',
+    termsOfService: 'Conditions d\'utilisation',
+    exportData: 'Exporter les données',
+    deleteAccount: 'Supprimer le compte',
+    small: 'Petit',
+    medium: 'Moyen',
+    large: 'Grand',
+    placementTest: 'Test de placement',
+    findLevel: 'Trouvons votre niveau de départ parfait',
+    question: 'Question',
+    startLearning: 'Commencer à apprendre !',
+    placementComplete: 'Test de placement terminé !',
+    yourLevel: 'Votre niveau :',
+    score: 'Score :',
+    liveTeacherSupport: 'Support enseignant en direct',
+    live: 'En direct',
+    offline: 'Hors ligne',
+    recentCorrections: 'Corrections récentes',
+    schedulePrivateLesson: 'Programmer une leçon privée',
+    home: 'Accueil',
+    lessonsNav: 'Leçons',
+    quizNav: 'Quiz',
+    aiCoachNav: 'Coach IA',
+    profileNav: 'Profil',
+    typeMessage: 'Tapez votre message...',
+    fillBlank: 'Remplissez le vide :',
+    matchPairs: 'Associez les paires :',
+    trueFalse: 'Vrai ou Faux :',
+    ttsInput: 'Entrée TTS',
+    typeTextToSpeak: 'Tapez le texte à prononcer',
+    playAudio: 'Lire l\'audio',
+    selectLanguage: 'Sélectionner la langue'
+  },
+  spanish: {
+    welcomeBack: '¡Bienvenido de vuelta! 👋',
+    readyToContinue: '¿Listo para continuar aprendiendo?',
+    dayStreak: 'Racha de días',
+    totalXP: 'XP total',
+    level: 'Nivel',
+    selectLanguage: 'Seleccionar idioma',
+    continueLesson: 'Continuar lección',
+    aiCoach: 'Entrenador IA',
+    lessons: 'Lecciones',
+    courseProgress: 'Progreso del curso',
+    beginnerLevel: 'Nivel principiante',
+    intermediateLevel: 'Nivel intermedio',
+    advancedLevel: 'Nivel avanzado',
+    quizChallenge: 'Desafío de quiz',
+    nextQuestion: 'Siguiente pregunta',
+    finishQuiz: 'Terminar quiz',
+    aiLanguageCoach: 'Entrenador de idiomas IA',
+    pronunciationCoach: 'Entrenador de pronunciación',
+    say: 'Di: ',
+    analyzingPronunciation: 'La IA está analizando tu pronunciación...',
+    chatWithAiTutor: 'Chatear con tutor IA',
+    askAboutLearning: 'Pregúntame cualquier cosa sobre el aprendizaje de idiomas...',
+    send: 'Enviar',
+    profile: 'Perfil',
+    achievements: 'Logros',
+    weeklyLeaderboard: 'Tabla de clasificación semanal',
+    settings: 'Configuración',
+    accessibility: 'Accesibilidad',
+    fontSize: 'Tamaño de fuente',
+    highContrast: 'Alto contraste',
+    captions: 'Subtítulos',
+    languagePreferences: 'Preferencias de idioma',
+    interfaceLanguage: 'Idioma de la interfaz',
+    autoPlayAudio: 'Reproducción automática de audio',
+    notifications: 'Notificaciones',
+    dailyReminders: 'Recordatorios diarios',
+    achievementAlerts: 'Alertas de logros',
+    streakWarnings: 'Advertencias de racha',
+    account: 'Cuenta',
+    privacyPolicy: 'Política de privacidad',
+    termsOfService: 'Términos de servicio',
+    exportData: 'Exportar datos',
+    deleteAccount: 'Eliminar cuenta',
+    small: 'Pequeño',
+    medium: 'Mediano',
+    large: 'Grande',
+    placementTest: 'Prueba de ubicación',
+    findLevel: 'Encontremos tu nivel de inicio perfecto',
+    question: 'Pregunta',
+    startLearning: '¡Comenzar a aprender!',
+    placementComplete: '¡Prueba de ubicación completada!',
+    yourLevel: 'Tu nivel:',
+    score: 'Puntuación:',
+    liveTeacherSupport: 'Soporte de profesor en vivo',
+    live: 'En vivo',
+    offline: 'Sin conexión',
+    recentCorrections: 'Correcciones recientes',
+    schedulePrivateLesson: 'Programar lección privada',
+    home: 'Inicio',
+    lessonsNav: 'Lecciones',
+    quizNav: 'Quiz',
+    aiCoachNav: 'Entrenador IA',
+    profileNav: 'Perfil',
+    typeMessage: 'Escribe tu mensaje...',
+    fillBlank: 'Completa el espacio en blanco:',
+    matchPairs: 'Empareja las parejas:',
+    trueFalse: 'Verdadero o Falso:',
+    ttsInput: 'Entrada TTS',
+    typeTextToSpeak: 'Escribe el texto para pronunciar',
+    playAudio: 'Reproducir audio',
+    selectLanguage: 'Seleccionar idioma'
   }
 };
 
@@ -681,13 +841,22 @@ const PLACEMENT_QUESTIONS = {
 };
 
 const LanguageLearningMVP = () => {
+  // Authentication states
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showAuthForm, setShowAuthForm] = useState(false);
+  const [showLanguageSelection, setShowLanguageSelection] = useState(false);
+  const [authError, setAuthError] = useState('');
+
+  // App states
   const [currentScreen, setCurrentScreen] = useState('home');
   const [selectedLanguage, setSelectedLanguage] = useState('english');
+  const [learningLanguages, setLearningLanguages] = useState([]);
   const [userProgress, setUserProgress] = useState({
-    xp: 1250,
-    streak: 7,
-    level: 3,
-    badges: ['first-lesson', 'week-streak', 'pronunciation-pro']
+    xp: 0,
+    streak: 0,
+    level: 1,
+    badges: []
   });
   const [isRecording, setIsRecording] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -695,13 +864,19 @@ const LanguageLearningMVP = () => {
   const [highContrast, setHighContrast] = useState(false);
   const [captionsEnabled, setCaptionsEnabled] = useState(false);
   const [quizScore, setQuizScore] = useState(0);
+  const [userSettings, setUserSettings] = useState({
+    darkMode: false,
+    notifications: true,
+    sound: true,
+    fontSize: 'medium'
+  });
 
   // PWA Install Prompt state
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallPrompt, setShowInstallPrompt] = useState(true);
 
   // Get current language with RTL support
-  const currentLanguage = useMemo(() => LANGUAGES[selectedLanguage], [selectedLanguage]);
+  const currentLanguage = useMemo(() => INTERFACE_LANGUAGES[selectedLanguage], [selectedLanguage]);
 
   // Translation function
   const t = useCallback((key) => {
@@ -713,6 +888,7 @@ const LanguageLearningMVP = () => {
     { id: 'home', icon: Home, labelKey: 'home' },
     { id: 'lessons', icon: BookOpen, labelKey: 'lessonsNav' },
     { id: 'quiz', icon: Target, labelKey: 'quizNav' },
+    { id: 'tts-input', icon: Volume2, labelKey: 'ttsInput' },
     { id: 'ai-coach', icon: Brain, labelKey: 'aiCoachNav' },
     { id: 'profile', icon: User, labelKey: 'profileNav' }
   ], [t]);
@@ -721,17 +897,22 @@ const LanguageLearningMVP = () => {
   // Enhanced TTS function using Google TTS service with fallback
   const speakText = useCallback(async (text, lang = 'english', options = {}) => {
     try {
-      // Import the enhanced TTS function
+      // Import enhanced TTS function (your custom module)
       const { default: enhancedSpeakText } = await import('./TextToSpeech');
       return await enhancedSpeakText(text, lang, options);
     } catch (error) {
       console.error('TTS Error:', error);
+
       // Fallback to basic Web Speech API
       if ('speechSynthesis' in window) {
         speechSynthesis.cancel();
+
         const utterance = new SpeechSynthesisUtterance(text);
+
         const langMap = {
-          arabic: 'ar-SA',
+          arabic: 'الاصطناعي',     // you can also try 'ar-XA'
+          french: 'fr-FR',
+          spanish: 'es-ES',
           dutch: 'nl-NL',
           indonesian: 'id-ID',
           malay: 'ms-MY',
@@ -739,13 +920,75 @@ const LanguageLearningMVP = () => {
           khmer: 'km-KH',
           english: 'en-US'
         };
-        utterance.lang = langMap[lang] || langMap[selectedLanguage] || 'en-US';
-        utterance.rate = options.rate || 0.8;
+
+        const selectedLangCode = langMap[lang] || langMap[selectedLanguage] || 'en-US';
+        utterance.lang = selectedLangCode;
+
+        // 🔑 Pick a voice that supports the selected language
+        const voices = speechSynthesis.getVoices();
+        const matchedVoice = voices.find(v => v.lang === selectedLangCode);
+        if (matchedVoice) {
+          utterance.voice = matchedVoice;
+        }
+
+        // Options
+        utterance.rate = options.rate || 0.9;
         utterance.pitch = options.pitch || 1;
+
+        // Speak
         speechSynthesis.speak(utterance);
       }
     }
   }, [selectedLanguage]);
+
+
+  // Authentication effect
+  useEffect(() => {
+    const unsubscribe = authService.onAuthStateChanged((user, userData) => {
+      console.log('Auth state changed:', { user: !!user, userData: !!userData });
+
+      if (user && userData) {
+        console.log('User authenticated, setting up user data...');
+        setIsAuthenticated(true);
+        setUserProgress({
+          xp: userData.xp || 0,
+          streak: userData.streak || 0,
+          level: userData.level || 1,
+          badges: userData.badges || []
+        });
+        setLearningLanguages(userData.learningLanguages || []);
+        setSelectedLanguage(userData.baseLanguage || 'english');
+        setUserSettings(userData.settings || {
+          darkMode: false,
+          notifications: true,
+          sound: true,
+          fontSize: 'medium'
+        });
+
+        // Check if user needs language selection
+        if (!userData.learningLanguages || userData.learningLanguages.length === 0) {
+          setShowLanguageSelection(true);
+        } else {
+          setShowLanguageSelection(false);
+        }
+
+        // Ensure we're not showing auth form when user is authenticated
+        setShowAuthForm(false);
+        setCurrentScreen('home'); // Ensure we're on the home screen after login
+      } else {
+        console.log('User not authenticated, resetting state...');
+        setIsAuthenticated(false);
+        setUserProgress({ xp: 0, streak: 0, level: 1, badges: [] });
+        setLearningLanguages([]);
+        setShowLanguageSelection(false);
+        setShowAuthForm(false);
+        setCurrentScreen('home');
+      }
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // Load voices asynchronously
   useEffect(() => {
@@ -783,6 +1026,77 @@ const LanguageLearningMVP = () => {
       }
       setDeferredPrompt(null);
     }
+  };
+
+
+  // Authentication handlers
+  const handleAuthSuccess = async (authData) => {
+    setIsLoading(true);
+    setAuthError('');
+
+    try {
+      // Dev bypass (no login) to allow reaching home if Firebase misconfigured
+      if (authData.devBypass) {
+        setIsAuthenticated(true);
+        setShowAuthForm(false);
+        setCurrentScreen('home');
+        setIsLoading(false);
+        return;
+      }
+
+      if (authData.isLogin) {
+        const result = await authService.signIn(authData.email, authData.password);
+        if (result.success) {
+          // The onAuthStateChanged listener will handle setting isAuthenticated
+          setShowAuthForm(false);
+          // Also navigate immediately
+          setIsAuthenticated(true);
+          setCurrentScreen('home');
+        } else {
+          setAuthError(result.error);
+        }
+      } else {
+        const result = await authService.register(
+          authData.email,
+          authData.password,
+          authData.displayName,
+          [] // Empty learning languages, will be set in language selection
+        );
+        if (result.success) {
+          // The onAuthStateChanged listener will handle setting isAuthenticated
+          setShowAuthForm(false);
+          // Also navigate immediately
+          setIsAuthenticated(true);
+          setCurrentScreen('home');
+          // Language selection will be handled by the auth listener
+        } else {
+          setAuthError(result.error);
+        }
+      }
+    } catch (error) {
+      setAuthError('An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLanguageSelection = async (languageData) => {
+    setIsLoading(true);
+    try {
+      await authService.updateLearningLanguages(languageData.learningLanguages);
+      await authService.updateBaseLanguage(languageData.baseLanguage);
+      setShowLanguageSelection(false);
+    } catch (error) {
+      setAuthError('Failed to save language preferences');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    await authService.signOut();
+    // The onAuthStateChanged listener will handle setting isAuthenticated to false
+    setCurrentScreen('home');
   };
 
   // Memoized Navigation Component
@@ -860,7 +1174,7 @@ const LanguageLearningMVP = () => {
           {t('selectLanguage')}
         </h2>
         <div className="grid grid-cols-2 gap-3">
-          {Object.entries(LANGUAGES).map(([key, lang]) => (
+          {Object.entries(INTERFACE_LANGUAGES).map(([key, lang]) => (
             <button
               key={key}
               onClick={() => setSelectedLanguage(key)}
@@ -898,7 +1212,11 @@ const LanguageLearningMVP = () => {
   );
 
   const LessonsScreen = () => {
-    const vocab = VOCABULARY.beginner[selectedLanguage] || VOCABULARY.beginner.english;
+    const [activeTab, setActiveTab] = useState(learningLanguages[0] || 'english');
+
+    // Get vocabulary for the active learning language
+    const vocab = VOCABULARY.beginner[activeTab] || VOCABULARY.beginner.english;
+
     return (
       <div className={`space-y-6 ${currentLanguage.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage.rtl ? 'rtl' : 'ltr'}>
         <div className="flex items-center justify-between">
@@ -907,6 +1225,29 @@ const LanguageLearningMVP = () => {
           </h1>
           <div className="text-blue-400 font-medium">{t('level')} {userProgress.level}</div>
         </div>
+
+        {/* Language Tabs - Only show if user is learning multiple languages */}
+        {learningLanguages.length > 1 && (
+          <div className="bg-slate-800/50 rounded-xl p-1">
+            <div className="flex space-x-1">
+              {learningLanguages.map((lang) => (
+                <button
+                  key={lang}
+                  onClick={() => setActiveTab(lang)}
+                  className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${activeTab === lang
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                    }`}
+                >
+                  <div className="flex items-center justify-center space-x-2">
+                    <span className="text-lg">{LEARNING_LANGUAGES[lang]?.flag}</span>
+                    <span>{LEARNING_LANGUAGES[lang]?.name}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Progress Bar */}
         <div className="bg-slate-800 rounded-xl p-4">
@@ -922,7 +1263,7 @@ const LanguageLearningMVP = () => {
         {/* Lesson Categories */}
         {['Beginner', 'Intermediate', 'Advanced'].map((level) => {
           const levelKey = level.toLowerCase() + 'Level';
-          const levelVocab = VOCABULARY[level.toLowerCase()][selectedLanguage] || VOCABULARY[level.toLowerCase()].english;
+          const levelVocab = VOCABULARY[level.toLowerCase()][activeTab] || VOCABULARY[level.toLowerCase()].english;
           return (
             <div key={level} className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-4">
               <div className="flex items-center justify-between mb-3">
@@ -935,10 +1276,10 @@ const LanguageLearningMVP = () => {
                   <div
                     key={index}
                     className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg hover:bg-slate-700 transition-colors cursor-pointer"
-                    onClick={() => speakText(item.word, selectedLanguage)}
+                    onClick={() => speakText(item.word, activeTab)}
                     role="button"
                     tabIndex={0}
-                    onKeyPress={(e) => e.key === 'Enter' && speakText(item.word, selectedLanguage)}
+                    onKeyPress={(e) => e.key === 'Enter' && speakText(item.word, activeTab)}
                   >
                     <div>
                       <div className={`font-medium text-white ${fontSize}`}>{item.word}</div>
@@ -947,6 +1288,7 @@ const LanguageLearningMVP = () => {
                       </div>
                     </div>
                     <button
+                      onClick={() => speakText(item.word, activeTab)}
                       className="text-blue-400 hover:text-blue-300"
                       aria-label={`Play pronunciation for ${item.word}`}
                     >
@@ -965,6 +1307,8 @@ const LanguageLearningMVP = () => {
   const LANG_CODES = {
     english: 'en-US',
     arabic: 'ar-SA',
+    french: 'fr-FR',
+    spanish: 'es-ES',
     dutch: 'nl-NL',
     indonesian: 'id-ID',
     malay: 'ms-MY',
@@ -1084,10 +1428,10 @@ const LanguageLearningMVP = () => {
                   : "Enter your answer here..."
               }
               className={`w-full p-4 rounded-xl text-white bg-slate-700 border-2 focus:outline-none focus:border-blue-400 ${showResult
-                  ? isCurrentCorrect
-                    ? "border-green-400 bg-green-600"
-                    : "border-red-400 bg-red-600"
-                  : "border-transparent"
+                ? isCurrentCorrect
+                  ? "border-green-400 bg-green-600"
+                  : "border-red-400 bg-red-600"
+                : "border-transparent"
                 }`}
               dir={isQuestionArabic ? "rtl" : "auto"}
             />
@@ -1379,6 +1723,53 @@ const LanguageLearningMVP = () => {
           { pattern: /ខ្ញុំជា/gi, correction: 'ខ្ញុំ', note: 'Simplify statements.' }
         ]
       };
+      const AppContent = () => {
+        const { user, setUser, loading } = useUser();
+        const [firstLogin, setFirstLogin] = useState(false);
+
+        useEffect(() => {
+          if (!loading && user) {
+            const localData = JSON.parse(localStorage.getItem("userData")) || {};
+            const languages = user.learningLanguages || localData.learningLanguages || [];
+
+            if (languages.length === 0) {
+              setFirstLogin(true);
+            } else {
+              if (!user.learningLanguages) {
+                setUser({ ...user, learningLanguages: languages });
+              }
+              setFirstLogin(false);
+            }
+          }
+        }, [user, loading, setUser]);
+
+        if (loading) return <p>Loading...</p>;
+
+        if (!user) return (
+          <AuthForm onAuthSuccess={(authUser) => {
+            const fallbackUser = { uid: "local-" + Date.now(), learningLanguages: [], ...authUser };
+            localStorage.setItem("userData", JSON.stringify(fallbackUser));
+            setUser(fallbackUser);
+          }} />
+        );
+
+        if (firstLogin) return <Onboarding />;
+
+        return (
+          <div>
+            <LessonsTab />
+            <Profile />
+          </div>
+        );
+      };
+
+      function App() {
+        return (
+          <UserProvider>
+            <AppContent />
+          </UserProvider>
+        );
+      }
 
       const langRules = rules[selectedLanguage] || rules.english;
       langRules.forEach(rule => {
@@ -1410,23 +1801,23 @@ const LanguageLearningMVP = () => {
           ? 'Great stress on "hello".'
           : 'Work on stressing the first syllable in "hello".';
       } else if (selectedLanguage === 'arabic') {
-        phonemeFeedback = text.includes('مَرْحَبًا') ? 'Good use of diacritics in pronunciation.' : 'Focus on the harakat (vowels) for clarity.';
+        phonemeFeedback = transcript.includes('مَرْحَبًا') ? 'Good use of diacritics in pronunciation.' : 'Focus on the harakat (vowels) for clarity.';
       } // Extend for other languages
 
       return { score, feedback, phonemeFeedback };
     };
 
     useEffect(() => {
-        // Set expected text based on selected language with vowels for Arabic
-        const expectedTexts = {
-          english: 'Hello, how are you today?',
-          arabic: 'مَرْحَبًا، كَيْفَ حَالُكَ الْيَوْمَ؟', // With full diacritics
-          dutch: 'Hallo, hoe gaat het vandaag?',
-          indonesian: 'Halo, apa kabar hari ini?',
-          malay: 'Hello, apa khabar hari ini?',
-          thai: 'สวัสดี คุณสบายดีไหมวันนี้?',
-          khmer: 'សួស្តី អ្នកសប្បាយជាដើម្បីទេថ្ងៃនេះ?'
-        };
+      // Set expected text based on selected language with vowels for Arabic
+      const expectedTexts = {
+        english: 'Hello, how are you today?',
+        arabic: 'مَرْحَبًا، كَيْفَ حَالُكَ الْيَوْمَ؟', // With full diacritics
+        dutch: 'Hallo, hoe gaat het vandaag?',
+        indonesian: 'Halo, apa kabar hari ini?',
+        malay: 'Hello, apa khabar hari ini?',
+        thai: 'สวัสดี คุณสบายดีไหมวันนี้?',
+        khmer: 'សួស្តី អ្នកសប្បាយជាដើម្បីទេថ្ងៃនេះ?'
+      };
       setExpectedText(expectedTexts[selectedLanguage] || expectedTexts.english);
 
       // Initialize SpeechRecognition with language support
@@ -1437,6 +1828,8 @@ const LanguageLearningMVP = () => {
         recognitionRef.current.interimResults = true;
         const langMap = {
           arabic: 'ar-SA',
+          french: 'fr-FR',
+          spanish: 'es-ES',
           dutch: 'nl-NL',
           indonesian: 'id-ID',
           malay: 'ms-MY',
@@ -1503,10 +1896,13 @@ const LanguageLearningMVP = () => {
       };
     }, [selectedLanguage, expectedText]);
 
-    // Speak AI messages
+    // Speak AI messages (auto-detect Arabic and enforce Arabic TTS with diacritics)
     useEffect(() => {
       if (chatMessages.length > 0 && chatMessages[chatMessages.length - 1].type === 'ai') {
-        speakText(chatMessages[chatMessages.length - 1].message, selectedLanguage);
+        const msg = chatMessages[chatMessages.length - 1].message || '';
+        const containsArabic = /[\u0600-\u06FF]/.test(msg);
+        const lang = containsArabic ? 'arabic' : selectedLanguage;
+        speakText(msg, lang, { rate: containsArabic ? 0.9 : 1.0, pitch: 1.0 });
       }
     }, [chatMessages, selectedLanguage, speakText]);
 
@@ -1579,8 +1975,11 @@ const LanguageLearningMVP = () => {
       setInputMessage('');
     }, [inputMessage, selectedLanguage]);
 
+    // Determine RTL based on selected language key
+    const rtlLanguages = new Set(['arabic', 'hebrew', 'urdu', 'farsi']);
+    const isRTL = rtlLanguages.has(String(selectedLanguage).toLowerCase());
     return (
-      <div className={`space-y-6 ${LANGUAGES[selectedLanguage].rtl ? 'rtl' : 'ltr'}`} dir={LANGUAGES[selectedLanguage].rtl ? 'rtl' : 'ltr'}>
+      <div className={`space-y-6 ${isRTL ? 'rtl' : 'ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
         <div className="flex items-center justify-between">
           <h1 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-lg' ? 'text-2xl' : 'text-3xl'}`}>
             {t('aiLanguageCoach')}
@@ -1717,98 +2116,400 @@ const LanguageLearningMVP = () => {
     );
   };
 
-  const ProfileScreen = () => (
-    <div className={`space-y-6 ${currentLanguage.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage.rtl ? 'rtl' : 'ltr'}>
-      <div className="flex items-center justify-between">
-        <h1 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-lg' ? 'text-2xl' : 'text-3xl'}`}>
-          {t('profile')}
-        </h1>
-      </div>
+  const ProfileScreen = () => {
+    const [activeTab, setActiveTab] = useState('stats');
+    const [leaderboard, setLeaderboard] = useState([]);
+    const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
 
-      {/* User Stats */}
-      <div className="bg-gradient-to-br from-blue-900 to-purple-900 rounded-2xl p-6 text-white">
-        <div className="text-center mb-6">
-          <div className="w-20 h-20 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-3">
-            ME
-          </div>
-          <h2 className={`font-bold mb-1 ${fontSize === 'text-sm' ? 'text-lg' : fontSize === 'text-lg' ? 'text-xl' : 'text-2xl'}`}>Mohammed E.</h2>
-          <p className="text-blue-200">Language Explorer</p>
-        </div>
+    // Load leaderboard data
+    useEffect(() => {
+      const loadLeaderboard = async () => {
+        setIsLoadingLeaderboard(true);
+        const result = await databaseService.getLeaderboard(10);
+        if (result.success) {
+          setLeaderboard(result.data);
+        }
+        setIsLoadingLeaderboard(false);
+      };
+      loadLeaderboard();
+    }, []);
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="text-center p-4 bg-white/10 rounded-xl">
-            <Zap className="text-yellow-400 mx-auto mb-2" size={24} />
-            <div className="font-bold text-lg">{userProgress.xp}</div>
-            <div className="text-sm text-blue-200">{t('totalXP')}</div>
-          </div>
-          <div className="text-center p-4 bg-white/10 rounded-xl">
-            <Flame className="text-orange-400 mx-auto mb-2" size={24} />
-            <div className="font-bold text-lg">{userProgress.streak}</div>
-            <div className="text-sm text-blue-200">{t('dayStreak')}</div>
-          </div>
-        </div>
-      </div>
+    const handleSettingChange = async (setting, value) => {
+      const newSettings = { ...userSettings, [setting]: value };
+      setUserSettings(newSettings);
+      await authService.updateSettings({ [setting]: value });
+    };
 
-      {/* Achievements */}
-      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6">
-        <h3 className={`font-bold text-white mb-4 flex items-center ${fontSize}`}>
-          <Award className="mr-2" size={20} />
-          {t('achievements')}
-        </h3>
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { id: 'first-lesson', name: 'First Steps', icon: '🎯', unlocked: true },
-            { id: 'week-streak', name: 'Week Warrior', icon: '🔥', unlocked: true },
-            { id: 'pronunciation-pro', name: 'Pronunciation Pro', icon: '🎤', unlocked: true },
-            { id: 'polyglot', name: 'Polyglot', icon: '🌍', unlocked: false }
-          ].map(badge => (
-            <div
-              key={badge.id}
-              className={`p-4 rounded-xl text-center ${badge.unlocked
-                ? 'bg-gradient-to-br from-yellow-600 to-orange-600 text-white'
-                : 'bg-slate-700 text-slate-400'
-                }`}
-              role={badge.unlocked ? "img" : undefined}
-              aria-label={badge.unlocked ? `Achievement unlocked: ${badge.name}` : `Achievement locked: ${badge.name}`}
-            >
-              <div className="text-2xl mb-2">{badge.icon}</div>
-              <div className={`font-medium ${fontSize}`}>{badge.name}</div>
-            </div>
+    const LessonsTab = () => {
+      const { user } = useUser();
+      const [lessons, setLessons] = useState([]);
+      const [activeLang, setActiveLang] = useState(user?.learningLanguages[0] || "English");
+
+      useEffect(() => {
+        const fetchLessons = async () => {
+          if (!user) return;
+          const q = query(collection(db, "lessons"), where("language", "==", activeLang));
+          const snapshot = await getDocs(q);
+          setLessons(snapshot.docs.map(doc => doc.data()));
+        };
+        fetchLessons();
+      }, [activeLang, user]);
+
+      if (!user) return null;
+
+      return (
+        <div>
+          {/* Language Tabs */}
+          {user.learningLanguages.map(lang => (
+            <button key={lang} onClick={() => setActiveLang(lang)}>{lang}</button>
           ))}
-        </div>
-      </div>
 
-      {/* Leaderboard */}
-      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6">
-        <h3 className={`font-bold text-white mb-4 flex items-center ${fontSize}`}>
-          <Trophy className="mr-2" size={20} />
-          {t('weeklyLeaderboard')}
-        </h3>
-        <div className="space-y-3">
-          {[
-            { name: 'You', xp: userProgress.xp, rank: 1, current: true },
-            { name: 'Sarah M.', xp: 1180, rank: 2 },
-            { name: 'Ahmed K.', xp: 1050, rank: 3 }
-          ].map(user => (
-            <div
-              key={user.name}
-              className={`flex items-center justify-between p-3 rounded-lg ${user.current ? 'bg-blue-600/20 border border-blue-500/50' : 'bg-slate-700/50'
-                }`}
-            >
-              <div className="flex items-center">
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mr-3 ${user.rank === 1 ? 'bg-yellow-500' : user.rank === 2 ? 'bg-gray-400' : 'bg-amber-600'
-                  }`}>
-                  {user.rank}
+          {/* Lessons List */}
+          <ul>
+            {lessons.map((lesson) => (
+              <li key={lesson.lessonId}>
+                <h3>{lesson.title}</h3>
+                <p>{lesson.content}</p>
+                <audio controls src={lesson.audioUrl}></audio>
+              </li>
+            ))}
+          </ul>
+        </div>
+      );
+    };
+    const LanguageSettings = () => {
+
+      const handleLanguageChange = async (newLanguage) => {
+        const auth = getAuth();
+        const user = auth.currentUser;
+
+        if (!user) {
+          alert("দয়া করে লগ ইন করুন যাতে ভাষা পরিবর্তন করা যায়।");
+          return;
+        }
+
+        try {
+          await AuthService.updateBaseLanguage(user.uid, newLanguage);
+          console.log("ভাষা সফলভাবে আপডেট হয়েছে:", newLanguage);
+          alert(`ভাষা ${newLanguage} এ পরিবর্তিত হয়েছে।`);
+        } catch (error) {
+          console.error("ভাষা আপডেট করতে সমস্যা হয়েছে:", error);
+          alert("ভাষা আপডেট করতে সমস্যা হয়েছে। পুনরায় চেষ্টা করুন।");
+        }
+      };
+
+      return (
+        <div>
+          <h2>Language Settings</h2>
+          <button onClick={() => handleLanguageChange("English")}>
+            English
+          </button>
+          <button onClick={() => handleLanguageChange("Arabic")}>
+            Arabic
+          </button>
+          <button onClick={() => handleLanguageChange("Bangla")}>
+            Bangla
+          </button>
+        </div>
+      );
+    };
+    const handleLanguageChange = async (newLanguage) => {
+      const auth = getAuth();
+      const user = auth.currentUser;
+
+      if (!user) {
+        // ব্যবহারকারী লগইন নেই
+        alert("Please login to change setting.");
+        return;
+      }
+
+      try {
+        // লগইন থাকলে ভাষা আপডেট করুন
+        await AuthService.updateBaseLanguage(user.uid, newLanguage);
+        console.log("Language updated:", newLanguage);
+      } catch (error) {
+        console.error("Language update error:", error);
+        alert("Language update failed. Please try again.");
+      }
+    };
+    return (
+      <div className={`space-y-6 ${currentLanguage.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage.rtl ? 'rtl' : 'ltr'}>
+        <div className="flex items-center justify-between">
+          <h1 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-lg' ? 'text-2xl' : 'text-3xl'}`}>
+            {t('profile')}
+          </h1>
+        </div>
+
+        {/* Profile Tabs */}
+        <div className="bg-slate-800/50 rounded-xl p-1">
+          <div className="flex space-x-1">
+            {[
+              { id: 'stats', label: 'Stats' },
+              { id: 'settings', label: 'Settings' },
+              { id: 'leaderboard', label: 'Leaderboard' }
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${activeTab === tab.id
+                  ? 'bg-blue-600 text-white'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                  }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Stats Tab */}
+        {activeTab === 'stats' && (
+          <>
+            {/* User Stats */}
+            <div className="bg-gradient-to-br from-blue-900 to-purple-900 rounded-2xl p-6 text-white">
+              <div className="text-center mb-6">
+                <div className="w-20 h-20 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-3">
+                  {authService.getCurrentUser()?.displayName?.charAt(0) || 'U'}
                 </div>
-                <span className={`text-white font-medium ${fontSize}`}>{user.name}</span>
+                <h2 className={`font-bold mb-1 ${fontSize === 'text-sm' ? 'text-lg' : fontSize === 'text-lg' ? 'text-xl' : 'text-2xl'}`}>
+                  {authService.getCurrentUser()?.displayName || 'User'}
+                </h2>
+                <p className="text-blue-200">Language Explorer</p>
               </div>
-              <span className="text-slate-300">{user.xp} XP</span>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-4 bg-white/10 rounded-xl">
+                  <Zap className="text-yellow-400 mx-auto mb-2" size={24} />
+                  <div className="text-2xl font-bold">{userProgress.xp}</div>
+                  <div className="text-sm text-blue-200">Total XP</div>
+                </div>
+                <div className="text-center p-4 bg-white/10 rounded-xl">
+                  <Flame className="text-orange-400 mx-auto mb-2" size={24} />
+                  <div className="text-2xl font-bold">{userProgress.streak}</div>
+                  <div className="text-sm text-blue-200">Day Streak</div>
+                </div>
+                <div className="text-center p-4 bg-white/10 rounded-xl">
+                  <Trophy className="text-yellow-400 mx-auto mb-2" size={24} />
+                  <div className="text-2xl font-bold">{userProgress.level}</div>
+                  <div className="text-sm text-blue-200">Level</div>
+                </div>
+                <div className="text-center p-4 bg-white/10 rounded-xl">
+                  <Award className="text-purple-400 mx-auto mb-2" size={24} />
+                  <div className="text-2xl font-bold">{userProgress.badges.length}</div>
+                  <div className="text-sm text-blue-200">Badges</div>
+                </div>
+              </div>
             </div>
-          ))}
-        </div>
+
+            {/* Learning Languages */}
+            <div className="bg-slate-800 rounded-2xl p-6">
+              <h3 className={`font-bold text-white mb-4 ${fontSize === 'text-sm' ? 'text-lg' : fontSize === 'text-lg' ? 'text-xl' : 'text-2xl'}`}>
+                Learning Languages
+              </h3>
+              <div className="flex flex-wrap gap-3">
+                {learningLanguages.map((lang) => (
+                  <div key={lang} className="flex items-center space-x-2 bg-blue-600/20 text-blue-300 px-4 py-2 rounded-lg">
+                    <span className="text-lg">{LEARNING_LANGUAGES[lang]?.flag}</span>
+                    <span className="font-medium">{LEARNING_LANGUAGES[lang]?.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Achievements */}
+            <div className="bg-slate-800 rounded-2xl p-6">
+              <h3 className={`font-bold text-white mb-4 ${fontSize === 'text-sm' ? 'text-lg' : fontSize === 'text-lg' ? 'text-xl' : 'text-2xl'}`}>
+                {t('achievements')}
+              </h3>
+              <div className="space-y-3">
+                {userProgress.badges.length > 0 ? (
+                  userProgress.badges.map((badge, index) => (
+                    <div key={index} className="flex items-center p-3 bg-slate-700/50 rounded-lg">
+                      <Award className="text-yellow-400 mr-3" size={20} />
+                      <div>
+                        <div className="font-medium text-white">{badge.replace('-', ' ').toUpperCase()}</div>
+                        <div className="text-sm text-slate-400">Achievement unlocked!</div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-slate-400 text-center py-4">No achievements yet. Keep learning!</p>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Settings Tab */}
+        {activeTab === 'settings' && (
+          <div className="space-y-6">
+            {/* Interface Language */}
+            <div className="bg-slate-800 rounded-2xl p-6">
+              <h3 className={`font-bold text-white mb-4 ${fontSize === 'text-sm' ? 'text-lg' : fontSize === 'text-lg' ? 'text-xl' : 'text-2xl'}`}>
+                Interface Language
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                {Object.entries(INTERFACE_LANGUAGES).map(([key, lang]) => (
+                  <button
+                    key={key}
+                    onClick={() => handleLanguageChange('base', key)}
+                    className={`p-4 rounded-xl border-2 transition-all ${selectedLanguage === key
+                      ? 'border-blue-500 bg-blue-500/20 text-blue-300'
+                      : 'border-slate-600 bg-slate-700/50 text-slate-300 hover:border-slate-500'
+                      }`}
+                  >
+                    <div className="text-2xl mb-2">{lang.flag}</div>
+                    <div className="font-medium">{lang.name}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Learning Languages */}
+            <div className="bg-slate-800 rounded-2xl p-6">
+              <h3 className={`font-bold text-white mb-4 ${fontSize === 'text-sm' ? 'text-lg' : fontSize === 'text-lg' ? 'text-xl' : 'text-2xl'}`}>
+                Learning Languages
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                {Object.entries(LEARNING_LANGUAGES).map(([key, lang]) => (
+                  <button
+                    key={key}
+                    onClick={() => handleLanguageChange('learning', key)}
+                    className={`p-4 rounded-xl border-2 transition-all ${learningLanguages.includes(key)
+                      ? 'border-blue-500 bg-blue-500/20 text-blue-300'
+                      : 'border-slate-600 bg-slate-700/50 text-slate-300 hover:border-slate-500'
+                      }`}
+                  >
+                    <div className="text-2xl mb-2">{lang.flag}</div>
+                    <div className="font-medium">{lang.name}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* App Settings */}
+            <div className="bg-slate-800 rounded-2xl p-6">
+              <h3 className={`font-bold text-white mb-4 ${fontSize === 'text-sm' ? 'text-lg' : fontSize === 'text-lg' ? 'text-xl' : 'text-2xl'}`}>
+                App Settings
+              </h3>
+              <div className="space-y-4">
+                {/* Dark Mode */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium text-white">Dark Mode</div>
+                    <div className="text-sm text-slate-400">Toggle dark/light theme</div>
+                  </div>
+                  <button
+                    onClick={() => handleSettingChange('darkMode', !userSettings.darkMode)}
+                    className={`w-12 h-6 rounded-full transition-colors ${userSettings.darkMode ? 'bg-blue-600' : 'bg-slate-600'
+                      }`}
+                  >
+                    <div className={`w-5 h-5 bg-white rounded-full transition-transform ${userSettings.darkMode ? 'translate-x-6' : 'translate-x-0.5'
+                      }`} />
+                  </button>
+                </div>
+
+                {/* Notifications */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium text-white">Notifications</div>
+                    <div className="text-sm text-slate-400">Enable push notifications</div>
+                  </div>
+                  <button
+                    onClick={() => handleSettingChange('notifications', !userSettings.notifications)}
+                    className={`w-12 h-6 rounded-full transition-colors ${userSettings.notifications ? 'bg-blue-600' : 'bg-slate-600'
+                      }`}
+                  >
+                    <div className={`w-5 h-5 bg-white rounded-full transition-transform ${userSettings.notifications ? 'translate-x-6' : 'translate-x-0.5'
+                      }`} />
+                  </button>
+                </div>
+
+                {/* Sound */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium text-white">Sound</div>
+                    <div className="text-sm text-slate-400">Enable audio feedback</div>
+                  </div>
+                  <button
+                    onClick={() => handleSettingChange('sound', !userSettings.sound)}
+                    className={`w-12 h-6 rounded-full transition-colors ${userSettings.sound ? 'bg-blue-600' : 'bg-slate-600'
+                      }`}
+                  >
+                    <div className={`w-5 h-5 bg-white rounded-full transition-transform ${userSettings.sound ? 'translate-x-6' : 'translate-x-0.5'
+                      }`} />
+                  </button>
+                </div>
+
+                {/* Font Size */}
+                <div>
+                  <div className="font-medium text-white mb-2">Font Size</div>
+                  <div className="flex space-x-2">
+                    {['small', 'medium', 'large'].map((size) => (
+                      <button
+                        key={size}
+                        onClick={() => handleSettingChange('fontSize', size)}
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${userSettings.fontSize === size
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                          }`}
+                      >
+                        {size.charAt(0).toUpperCase() + size.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+
+        {activeTab === 'leaderboard' && (
+          <div className="bg-slate-800 rounded-2xl p-6">
+            <h3
+              className={`font-bold text-white mb-4 ${fontSize === 'text-sm' ? 'text-lg' : fontSize === 'text-lg' ? 'text-xl' : 'text-2xl'
+                }`}
+            >
+              {t('weeklyLeaderboard')}
+            </h3>
+            {isLoadingLeaderboard ? (
+              <div className="text-center py-8">
+                <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                <p className="text-slate-400">Loading leaderboard...</p>
+              </div>
+            ) : leaderboard.length > 0 ? (
+              <div className="space-y-3">
+                {leaderboard.map((user, index) => (
+                  <div key={user.id} className="flex items-center p-3 bg-slate-700/50 rounded-lg">
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold mr-3 ${index === 0
+                        ? 'bg-gradient-to-br from-yellow-400 to-orange-500'
+                        : index === 1
+                          ? 'bg-gradient-to-br from-gray-300 to-gray-500'
+                          : index === 2
+                            ? 'bg-gradient-to-br from-orange-400 to-orange-600'
+                            : 'bg-slate-600'
+                        }`}
+                    >
+                      {index + 1}
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-medium text-white">{user.displayName || 'Anonymous'}</div>
+                      <div className="text-sm text-slate-400">Level {user.level || 1}</div>
+                    </div>
+                    <div className="text-yellow-400 font-bold">{user.xp || 0} XP</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-slate-400 text-center py-8">No data available yet.</p>
+            )}
+          </div>
+        )}
       </div>
-    </div>
-  );
+    );
+  };
 
   const SettingsScreen = () => (
     <div className={`space-y-6 ${currentLanguage.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage.rtl ? 'rtl' : 'ltr'}>
@@ -1890,7 +2591,7 @@ const LanguageLearningMVP = () => {
               onChange={(e) => setSelectedLanguage(e.target.value)}
               className="w-full bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-blue-500 outline-none"
             >
-              {Object.entries(LANGUAGES).map(([key, lang]) => (
+              {Object.entries(INTERFACE_LANGUAGES).map(([key, lang]) => (
                 <option key={key} value={key}>{lang.name}</option>
               ))}
             </select>
@@ -2073,36 +2774,36 @@ const LanguageLearningMVP = () => {
     // AI Teacher responses based on context
     const getAIResponse = (userMessage) => {
       const message = userMessage.toLowerCase();
-      
+
       // Language learning responses
       if (message.includes('hello') || message.includes('hi')) {
         return `Hello! I'm Ms. Sarah, your AI language teacher. I'm here to help you learn ${selectedLanguage === 'arabic' ? 'Arabic' : selectedLanguage}. What would you like to practice today?`;
       }
-      
+
       if (message.includes('grammar') || message.includes('grammatical')) {
         return `Great! Let's work on grammar. In ${selectedLanguage === 'arabic' ? 'Arabic' : selectedLanguage}, we can practice verb conjugations, sentence structure, and more. What specific grammar topic interests you?`;
       }
-      
+
       if (message.includes('pronunciation') || message.includes('pronounce')) {
         return `Pronunciation is crucial! Let's practice together. I can help you with ${selectedLanguage === 'arabic' ? 'Arabic diacritics and sounds' : 'phonetics and accent'}. Try saying a word and I'll give you feedback!`;
       }
-      
+
       if (message.includes('vocabulary') || message.includes('words')) {
         return `Excellent! Building vocabulary is key to fluency. Let's learn some new ${selectedLanguage === 'arabic' ? 'Arabic' : selectedLanguage} words. What topic would you like to focus on?`;
       }
-      
+
       if (message.includes('difficult') || message.includes('hard')) {
         return `Don't worry! Learning a new language takes time. Let's break it down into smaller, manageable steps. What specific part is challenging you?`;
       }
-      
+
       if (message.includes('practice') || message.includes('exercise')) {
         return `Perfect! Practice makes perfect. I can create custom exercises for you. What skill would you like to practice: speaking, listening, reading, or writing?`;
       }
-      
+
       if (message.includes('test') || message.includes('quiz')) {
         return `Great idea! Testing helps track progress. I can create a personalized quiz for your level. What topics should I include?`;
       }
-      
+
       // Default responses
       const responses = [
         `That's interesting! Tell me more about what you'd like to learn in ${selectedLanguage === 'arabic' ? 'Arabic' : selectedLanguage}.`,
@@ -2111,7 +2812,7 @@ const LanguageLearningMVP = () => {
         `I understand! Learning ${selectedLanguage === 'arabic' ? 'Arabic' : selectedLanguage} can be challenging. Let's tackle this step by step.`,
         `Excellent! I'm excited to help you improve. What's your main goal today?`
       ];
-      
+
       return responses[Math.floor(Math.random() * responses.length)];
     };
 
@@ -2192,7 +2893,7 @@ const LanguageLearningMVP = () => {
         quiz: "Great idea! I can create a personalized quiz for you. What level are you at?",
         conversation: "Wonderful! Let's have a conversation in " + selectedLanguage + ". What would you like to talk about?"
       };
-      
+
       const newMsg = {
         id: messages.length + 1,
         text: actionMessages[action],
@@ -2249,13 +2950,12 @@ const LanguageLearningMVP = () => {
                 <MessageCircle className="mx-auto mb-1" size={20} />
                 <span className="text-sm">Chat</span>
               </button>
-              <button 
+              <button
                 onClick={handleVoiceCall}
-                className={`p-3 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-purple-400 ${
-                  isVoiceCallActive 
-                    ? 'bg-red-600 text-white' 
-                    : 'bg-purple-800/50 text-purple-200 hover:bg-purple-700/50'
-                }`}
+                className={`p-3 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-purple-400 ${isVoiceCallActive
+                  ? 'bg-red-600 text-white'
+                  : 'bg-purple-800/50 text-purple-200 hover:bg-purple-700/50'
+                  }`}
               >
                 <Mic className="mx-auto mb-1" size={20} />
                 <span className="text-sm">{isVoiceCallActive ? 'End Call' : 'Voice Call'}</span>
@@ -2285,11 +2985,10 @@ const LanguageLearningMVP = () => {
                 <div className="text-center">
                   <button
                     onClick={handleVoiceRecording}
-                    className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-2 transition-all ${
-                      isRecording 
-                        ? 'bg-red-500 animate-pulse' 
-                        : 'bg-green-500 hover:bg-green-400'
-                    }`}
+                    className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-2 transition-all ${isRecording
+                      ? 'bg-red-500 animate-pulse'
+                      : 'bg-green-500 hover:bg-green-400'
+                      }`}
                   >
                     {isRecording ? <MicOff size={24} /> : <Mic size={24} />}
                   </button>
@@ -2338,7 +3037,7 @@ const LanguageLearningMVP = () => {
                     </div>
                   </div>
                 ))}
-                
+
                 {/* Typing indicator */}
                 {isTyping && (
                   <div className="flex justify-start">
@@ -2443,12 +3142,145 @@ const LanguageLearningMVP = () => {
     );
   };
 
+  // TTS Input Component
+  const TTSInputScreen = () => {
+    const [inputText, setInputText] = useState('');
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [selectedTTSLanguage, setSelectedTTSLanguage] = useState(selectedLanguage);
+
+    const handleSpeak = async () => {
+      if (!inputText.trim()) return;
+
+      setIsPlaying(true);
+      try {
+        await speakText(inputText, selectedTTSLanguage);
+      } catch (error) {
+        console.error('TTS Error:', error);
+      } finally {
+        // Reset playing state after a delay
+        setTimeout(() => setIsPlaying(false), 2000);
+      }
+    };
+
+    const handleKeyPress = (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSpeak();
+      }
+    };
+
+    return (
+      <div className={`space-y-6 p-4 ${currentLanguage.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage.rtl ? 'rtl' : 'ltr'}>
+        {/* Header */}
+        <div className="text-center">
+          <h1 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-lg' ? 'text-2xl' : 'text-3xl'}`}>
+            {t('ttsInput')}
+          </h1>
+          <p className="text-slate-400 mt-2">{t('typeTextToSpeak')}</p>
+        </div>
+
+        {/* Language Selector */}
+        <div className="bg-slate-800/50 rounded-xl p-4">
+          <h3 className="text-white font-medium mb-3 flex items-center">
+            <Globe className="w-5 h-5 mr-2" />
+            {t('selectLanguage')}
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {Object.entries(INTERFACE_LANGUAGES).map(([key, lang]) => (
+              <button
+                key={key}
+                onClick={() => setSelectedTTSLanguage(key)}
+                className={`p-3 rounded-lg border-2 transition-all ${selectedTTSLanguage === key
+                  ? 'border-blue-500 bg-blue-500/20 text-blue-300'
+                  : 'border-slate-600 bg-slate-700/50 text-slate-300 hover:border-slate-500'
+                  }`}
+                aria-pressed={selectedTTSLanguage === key}
+              >
+                <div className="text-2xl mb-1">{lang.flag}</div>
+                <div className="text-xs font-medium">{lang.name}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Text Input Area */}
+        <div className="bg-slate-800/50 rounded-xl p-4">
+          <label htmlFor="tts-input" className="block text-white font-medium mb-3">
+            {t('typeTextToSpeak')}
+          </label>
+          <div className="space-y-4">
+            <textarea
+              id="tts-input"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder={t('typeTextToSpeak')}
+              className={`w-full p-4 rounded-lg bg-slate-700/50 border border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none ${currentLanguage.rtl ? 'text-right' : 'text-left'
+                } ${fontSize}`}
+              rows={4}
+              dir={INTERFACE_LANGUAGES[selectedTTSLanguage]?.rtl ? 'rtl' : 'ltr'}
+            />
+
+            {/* Play Button */}
+            <div className="flex justify-center">
+              <button
+                onClick={handleSpeak}
+                disabled={!inputText.trim() || isPlaying}
+                className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-medium transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 ${!inputText.trim() || isPlaying
+                  ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-500 hover:to-purple-500'
+                  }`}
+              >
+                {isPlaying ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    <span>Playing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Volume2 className="w-5 h-5" />
+                    <span>{t('playAudio')}</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Examples */}
+        <div className="bg-slate-800/50 rounded-xl p-4">
+          <h3 className="text-white font-medium mb-3">Quick Examples</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {(() => {
+              const examples = {
+                english: ['Hello, how are you?', 'Good morning!', 'Thank you very much.'],
+                arabic: ['مرحبا، كيف حالك؟', 'صباح الخير!', 'شكرا جزيلا.'],
+                french: ['Bonjour, comment allez-vous?', 'Bonjour!', 'Merci beaucoup.'],
+                spanish: ['Hola, ¿cómo estás?', '¡Buenos días!', 'Muchas gracias.']
+              };
+              return examples[selectedTTSLanguage]?.map((example, index) => (
+                <button
+                  key={index}
+                  onClick={() => setInputText(example)}
+                  className="p-3 text-left bg-slate-700/50 rounded-lg text-slate-300 hover:bg-slate-600/50 transition-colors"
+                >
+                  {example}
+                </button>
+              ));
+            })()}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Main render function
   const renderScreen = () => {
     switch (currentScreen) {
       case 'home': return <HomeScreen />;
       case 'lessons': return <LessonsScreen />;
       case 'quiz': return <QuizScreenEnhanced selectedLanguage={selectedLanguage} onFinish={(score, total) => setQuizScore(score)} />;
+      case 'tts-input': return <TTSInputScreen />;
       case 'ai-coach': return <AICoachScreen t={t} selectedLanguage={selectedLanguage} speakText={speakText} fontSize={fontSize} />;
       case 'profile': return <ProfileScreen />;
       case 'settings': return <SettingsScreen />;
@@ -2457,6 +3289,68 @@ const LanguageLearningMVP = () => {
       default: return <HomeScreen />;
     }
   };
+
+  // Show loading screen
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <User className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="text-xl font-bold text-white mb-2">Loading...</h2>
+          <p className="text-slate-400">Setting up your learning experience</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show authentication form
+  if (showAuthForm) {
+    return (
+      <AuthForm
+        onAuthSuccess={handleAuthSuccess}
+        onBack={() => setShowAuthForm(false)}
+        isLoading={isLoading}
+      />
+    );
+  }
+
+  // Show language selection
+  if (showLanguageSelection) {
+    return (
+      <LanguageSelection
+        onLanguageSelected={handleLanguageSelection}
+        isLoading={isLoading}
+      />
+    );
+  }
+
+  // Show login prompt if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-slate-800/50 backdrop-blur-sm rounded-2xl p-8 border border-slate-700 text-center">
+          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <User className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-2">Welcome to LinguaAI</h1>
+          <p className="text-slate-400 mb-6">Sign in to start your language learning journey</p>
+          <button
+            onClick={() => setShowAuthForm(true)}
+            className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-medium hover:from-blue-500 hover:to-purple-500 transition-all"
+          >
+            Get Started
+          </button>
+          {authError && (
+            <div className="mt-4 p-3 bg-red-600/20 border border-red-600/50 rounded-lg text-red-400 text-sm">
+              {authError}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`min-h-screen ${highContrast ? 'bg-black text-white' : 'bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800'} text-white`}>
@@ -2495,9 +3389,19 @@ const LanguageLearningMVP = () => {
               </>
             )}
 
-            <div className="flex items-center space-x-1 text-xs">
-              <Flame className="text-orange-400" size={14} />
-              <span className="font-bold">{userProgress.streak}</span>
+            <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1 text-xs">
+                <Flame className="text-orange-400" size={14} />
+                <span className="font-bold">{userProgress.streak}</span>
+              </div>
+              <button
+                onClick={handleSignOut}
+                className="p-2 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors"
+                title="Sign Out"
+                aria-label="Sign Out"
+              >
+                <User size={16} />
+              </button>
             </div>
           </div>
         </div>
