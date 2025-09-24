@@ -2,12 +2,13 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import TextToSpeech from "./TextToSpeech";
 import Quiz from "./quiz.js";
 import QuizScreenEnhanced from "./components/QuizScreenEnhanced";
-import AuthForm from "./components/AuthForm";
 import LanguageSelection from "./components/LanguageSelection";
 import authService from "./services/AuthService";
 import databaseService from "./services/DatabaseService";
 import ProtectedRoute from "./components/protectroute";
-import { getAuth } from "firebase/auth";
+import { BrowserRouter as Router, Routes, Route, useNavigate, Navigate } from 'react-router-dom';
+import AuthForm from "./components/AuthForm";
+
 
 
 import {
@@ -38,6 +39,38 @@ import {
 const LEARNING_LANGUAGES = {
   english: { name: 'English', flag: '🇺🇸', rtl: false },
   arabic: { name: 'العربية', flag: '🇸🇦', rtl: true }
+};
+
+
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<AuthForm />} />
+        <Route path="/home" element={<HomePage />} />
+      </Routes>
+    </Router>
+  );
+}
+
+
+const HomePage = () => {
+  const user = JSON.parse(localStorage.getItem('user'));
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    navigate('/'); // back to login
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 text-white">
+      <h1 className="text-2xl mb-4">Welcome, {user?.displayName || 'User'} 🎉</h1>
+      <button onClick={handleLogout} className="px-6 py-3 bg-red-600 rounded-xl">
+        Logout
+      </button>
+    </div>
+  );
 };
 
 const INTERFACE_LANGUAGES = {

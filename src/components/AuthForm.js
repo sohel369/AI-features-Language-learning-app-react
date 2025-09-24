@@ -1,8 +1,10 @@
 // Authentication Form Component
 import React, { useState } from 'react';
 import { Eye, EyeOff, Mail, Lock, User, ArrowRight, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import authService from '../services/AuthService';
 
-const AuthForm = ({ onAuthSuccess, onBack, isLoading = false }) => {
+const AuthForm = ({ onBack, isLoading = false }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -12,6 +14,9 @@ const AuthForm = ({ onAuthSuccess, onBack, isLoading = false }) => {
     displayName: ''
   });
   const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const navigate = useNavigate();
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -25,6 +30,7 @@ const AuthForm = ({ onAuthSuccess, onBack, isLoading = false }) => {
         [name]: ''
       }));
     }
+    if (submitError) setSubmitError('');
   };
 
   const validateForm = () => {
@@ -58,21 +64,31 @@ const AuthForm = ({ onAuthSuccess, onBack, isLoading = false }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (validateForm()) {
-      onAuthSuccess({
-        isLogin,
-        email: formData.email,
-        password: formData.password,
-        displayName: formData.displayName
-      });
+    if (!validateForm()) return;
+    setSubmitting(true);
+    setSubmitError('');
+    try {
+      if (isLogin) {
+        const res = await authService.signIn(formData.email, formData.password);
+        if (!res.success) throw new Error(res.error);
+      } else {
+        const res = await authService.register(formData.email, formData.password, formData.displayName);
+        if (!res.success) throw new Error(res.error);
+      }
+      navigate('/home', { replace: true });
+    } catch (err) {
+      setSubmitError(err.message || 'Authentication failed');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const toggleMode = () => {
     setIsLogin(!isLogin);
     setErrors({});
+    setSubmitError('');
     setFormData({
       email: '',
       password: '',
@@ -216,17 +232,21 @@ const AuthForm = ({ onAuthSuccess, onBack, isLoading = false }) => {
             </div>
           )}
 
+          {submitError && (
+            <div className="text-red-400 text-sm">{submitError}</div>
+          )}
+
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || submitting}
             className={`w-full py-4 rounded-xl font-medium transition-all flex items-center justify-center space-x-2 ${
-              isLoading
+              isLoading || submitting
                 ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
                 : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-500 hover:to-purple-500'
             }`}
           >
-            {isLoading ? (
+            {isLoading || submitting ? (
               <>
                 <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
                 <span>{isLogin ? 'Signing in...' : 'Creating account...'}</span>
@@ -237,15 +257,6 @@ const AuthForm = ({ onAuthSuccess, onBack, isLoading = false }) => {
                 <ArrowRight className="w-5 h-5" />
               </>
             )}
-          </button>
-
-          {/* Dev Bypass Button */}
-          <button
-            type="button"
-            onClick={() => onAuthSuccess({ devBypass: true })}
-            className="w-full py-3 mt-3 rounded-xl bg-slate-700/50 text-purple-300 font-medium hover:bg-slate-600 hover:text-pink-400 transition-colors"
-          >
-            Continue without login
           </button>
 
         </form>

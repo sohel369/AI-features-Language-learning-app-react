@@ -12,63 +12,44 @@ import {
 import { db } from '../firebase/config';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 
-class AuthService {
+class DemoAuthService {
 	constructor() {
 		this._listeners = new Set();
-		// Persist session across reloads
-		setPersistence(auth, browserLocalPersistence).catch(() => {});
-		// Bridge Firebase auth state to app listeners
-		firebaseOnAuthStateChanged(auth, async (firebaseUser) => {
-			if (!firebaseUser) {
-				this._emit(null, null);
-				return;
-			}
-			const user = { uid: firebaseUser.uid, email: firebaseUser.email, displayName: firebaseUser.displayName || (firebaseUser.email ? firebaseUser.email.split('@')[0] : '') };
-			const userDocRef = doc(db, 'users', firebaseUser.uid);
-			const snap = await getDoc(userDocRef);
-			let userData;
-			if (snap.exists()) {
-				userData = snap.data();
-			} else {
-				userData = {
-					uid: user.uid,
-					email: user.email,
-					displayName: user.displayName,
-					baseLanguage: 'english',
-					learningLanguages: [],
-					settings: { darkMode: false, notifications: true, sound: true, fontSize: 'medium' },
-					xp: 0,
-					level: 1,
-					streak: 0,
-					badges: [],
-					lessonProgress: {}
-				};
-				await setDoc(userDocRef, userData);
-			}
-			this._emit(user, userData);
-		});
+		this._initStorage();
+		// Emit initial state
+		this._emit(this.getCurrentUser(), this._getCurrentUserData());
 	}
 
-	_mapAuthError(error) {
-		const code = error?.code || '';
-		switch (code) {
-			case 'auth/invalid-credential':
-			case 'auth/wrong-password':
-			case 'auth/user-not-found':
-				return 'Invalid email or password';
-			case 'auth/too-many-requests':
-				return 'Too many attempts. Please try again later';
-			case 'auth/network-request-failed':
-				return 'Network error. Check your connection';
-			case 'auth/email-already-in-use':
-				return 'Email already registered';
-			case 'auth/weak-password':
-				return 'Password must be at least 6 characters';
-			case 'auth/operation-not-allowed':
-				return 'Email/password sign-in is disabled in Firebase Console';
-			default:
-				return error?.message || 'Authentication error';
+	_initStorage() {
+		if (!localStorage.getItem('demo_users')) {
+			localStorage.setItem('demo_users', JSON.stringify({}));
 		}
+		if (!localStorage.getItem('demo_current_user')) {
+			localStorage.setItem('demo_current_user', '');
+		}
+	}
+
+	_readUsers() {
+		try { return JSON.parse(localStorage.getItem('demo_users') || '{}'); } catch { return {}; }
+	}
+
+	_writeUsers(users) {
+		localStorage.setItem('demo_users', JSON.stringify(users));
+	}
+
+	_getCurrentUserId() {
+		return localStorage.getItem('demo_current_user') || '';
+	}
+
+	_setCurrentUserId(uid) {
+		localStorage.setItem('demo_current_user', uid || '');
+	}
+
+	_getCurrentUserData() {
+		const uid = this._getCurrentUserId();
+		if (!uid) return null;
+		const users = this._readUsers();
+		return users[uid] || null;
 	}
 
 	_emit(user, userData) {
@@ -78,103 +59,105 @@ class AuthService {
 	}
 
 	getCurrentUser() {
-		const u = auth.currentUser;
-		return u ? { uid: u.uid, email: u.email, displayName: u.displayName } : null;
+		const userData = this._getCurrentUserData();
+		if (!userData) return null;
+		return { uid: userData.uid, email: userData.email, displayName: userData.displayName };
 	}
 
 	onAuthStateChanged(callback) {
 		this._listeners.add(callback);
-		// Immediately invoke with current state including userData to avoid nulls
-		const u = auth.currentUser;
-		if (!u) {
-			callback(null, null);
-		} else {
-			(async () => {
-				try {
-					const user = { uid: u.uid, email: u.email, displayName: u.displayName };
-					const snap = await getDoc(doc(db, 'users', u.uid));
-					const data = snap.exists() ? snap.data() : null;
-					callback(user, data);
-				} catch {
-					callback({ uid: u.uid, email: u.email, displayName: u.displayName }, null);
-				}
-			})();
-		}
+		callback(this.getCurrentUser(), this._getCurrentUserData());
 		return () => this._listeners.delete(callback);
 	}
 
-	async register(email, password, displayName, learningLanguages = []) {
-		try {
-			const cred = await createUserWithEmailAndPassword(auth, email, password);
-			if (displayName) {
-				await updateProfile(cred.user, { displayName });
-			}
-			const userDocRef = doc(db, 'users', cred.user.uid);
-			const userData = {
-				uid: cred.user.uid,
-				email: cred.user.email,
-				displayName: displayName || (email ? email.split('@')[0] : ''),
-				baseLanguage: 'english',
-				learningLanguages: Array.isArray(learningLanguages) ? learningLanguages : [],
-				settings: { darkMode: false, notifications: true, sound: true, fontSize: 'medium' },
-				xp: 0,
-				level: 1,
-				streak: 0,
-				badges: [],
-				lessonProgress: {}
-			};
-			await setDoc(userDocRef, userData);
-			return { success: true, user: { uid: cred.user.uid, email: cred.user.email, displayName: userData.displayName } };
-		} catch (error) {
-			return { success: false, error: this._mapAuthError(error) };
+	_registerUserObject(email, displayName) {
+		const uid = `demo_${Math.random().toString(36).slice(2, 10)}`;
+		return {
+			uid,
+			email,
+			displayName: displayName || (email ? email.split('@')[0] : 'User'),
+			baseLanguage: 'english',
+			learningLanguages: [],
+			settings: { darkMode: false, notifications: true, sound: true, fontSize: 'medium' },
+			xp: 0,
+			level: 1,
+			streak: 0,
+			badges: [],
+			lessonProgress: {},
+			// store hashed-ish password for demo only (NOT secure)
+			_password: btoa(email + '|' + (Date.now()))
+		};
+	}
+
+	async register(email, password, displayName) {
+		if (!email || !password) {
+			return { success: false, error: 'Email and password are required' };
 		}
+		const users = this._readUsers();
+		const exists = Object.values(users).find(u => u.email === email);
+		if (exists) return { success: false, error: 'Email already registered' };
+		const user = this._registerUserObject(email, displayName);
+		// simple demo password storage
+		user._password = btoa(password);
+		users[user.uid] = user;
+		this._writeUsers(users);
+		this._setCurrentUserId(user.uid);
+		this._emit(this.getCurrentUser(), user);
+		return { success: true, user: { uid: user.uid, email: user.email, displayName: user.displayName } };
 	}
 
 	async signIn(email, password) {
-		try {
-			const cred = await signInWithEmailAndPassword(auth, email, password);
-			return { success: true, user: { uid: cred.user.uid, email: cred.user.email, displayName: cred.user.displayName } };
-		} catch (error) {
-			return { success: false, error: this._mapAuthError(error) };
-		}
+		const users = this._readUsers();
+		const found = Object.values(users).find(u => u.email === email);
+		if (!found) return { success: false, error: 'Invalid email or password' };
+		if (found._password !== btoa(password)) return { success: false, error: 'Invalid email or password' };
+		this._setCurrentUserId(found.uid);
+		this._emit(this.getCurrentUser(), found);
+		return { success: true, user: { uid: found.uid, email: found.email, displayName: found.displayName } };
 	}
 
 	async signOut() {
-		await firebaseSignOut(auth);
-		return { success: true };
-	}
-
-	async updateLearningLanguages(langs) {
-		const u = auth.currentUser;
-		if (!u) throw new Error('Not authenticated');
-		const userDocRef = doc(db, 'users', u.uid);
-		await updateDoc(userDocRef, { learningLanguages: Array.isArray(langs) ? langs : [] });
-		const snap = await getDoc(userDocRef);
-		this._emit(this.getCurrentUser(), snap.data());
-		return { success: true };
-	}
-
-	async updateBaseLanguage(lang) {
-		const u = auth.currentUser;
-		if (!u) throw new Error('Not authenticated');
-		const userDocRef = doc(db, 'users', u.uid);
-		await updateDoc(userDocRef, { baseLanguage: lang });
-		const snap = await getDoc(userDocRef);
-		this._emit(this.getCurrentUser(), snap.data());
+		this._setCurrentUserId('');
+		this._emit(null, null);
 		return { success: true };
 	}
 
 	async updateSettings(partialSettings) {
-		const u = auth.currentUser;
-		if (!u) throw new Error('Not authenticated');
-		const userDocRef = doc(db, 'users', u.uid);
-		// Merge settings safely
-		await setDoc(userDocRef, { settings: partialSettings }, { merge: true });
-		const snap = await getDoc(userDocRef);
-		this._emit(this.getCurrentUser(), snap.data());
+		const uid = this._getCurrentUserId();
+		if (!uid) throw new Error('Not authenticated');
+		const users = this._readUsers();
+		const current = users[uid] || {};
+		current.settings = { ...(current.settings || {}), ...(partialSettings || {}) };
+		users[uid] = current;
+		this._writeUsers(users);
+		this._emit(this.getCurrentUser(), current);
+		return { success: true };
+	}
+
+	async updateLearningLanguages(langs) {
+		const uid = this._getCurrentUserId();
+		if (!uid) throw new Error('Not authenticated');
+		const users = this._readUsers();
+		const current = users[uid] || {};
+		current.learningLanguages = Array.isArray(langs) ? langs : [];
+		users[uid] = current;
+		this._writeUsers(users);
+		this._emit(this.getCurrentUser(), current);
+		return { success: true };
+	}
+
+	async updateBaseLanguage(lang) {
+		const uid = this._getCurrentUserId();
+		if (!uid) throw new Error('Not authenticated');
+		const users = this._readUsers();
+		const current = users[uid] || {};
+		current.baseLanguage = lang;
+		users[uid] = current;
+		this._writeUsers(users);
+		this._emit(this.getCurrentUser(), current);
 		return { success: true };
 	}
 }
 
-const authService = new AuthService();
+const authService = new DemoAuthService();
 export default authService;

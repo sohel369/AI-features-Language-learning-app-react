@@ -1,5 +1,6 @@
 // src/components/ProtectRoute.js
 import React, { useEffect, useState } from "react";
+import { Navigate } from "react-router-dom";
 import authService from "../services/AuthService";
 
 export default function ProtectRoute({ children }) {
@@ -19,7 +20,7 @@ export default function ProtectRoute({ children }) {
   }
 
   if (!user) {
-    return null;
+    return <Navigate to="/" replace />;
   }
 
   return children;
