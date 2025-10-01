@@ -29,9 +29,18 @@ import {
   Play,
   Check,
   X,
+  Crown,
+  Moon,
+  Sun,
+  Bell,
+  BellOff,
   ChevronLeft,
   Globe,
   User,
+  Type,
+  Monitor,
+  Save,
+  TrendingUp,
   Flame   // use Flame instead of Fire
 } from 'lucide-react';
 
@@ -2066,147 +2075,135 @@ const LanguageLearningMVP = () => {
     );
   };
 
-  const ProfileScreen = () => {
-    const [activeTab, setActiveTab] = useState('stats');
-    const [leaderboard, setLeaderboard] = useState([]);
-    const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
+ const ProfileScreen = () => {
+  const [activeTab, setActiveTab] = useState('stats');
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState('en');
+  const [learningLanguages, setLearningLanguages] = useState(['es']);
+  const [userSettings, setUserSettings] = useState({
+    darkMode: true,
+    notifications: true,
+    sound: true,
+    fontSize: 'medium'
+  });
+  const [fontSize, setFontSize] = useState('text-base');
 
-    // Load leaderboard data
-    useEffect(() => {
-      const loadLeaderboard = async () => {
-        setIsLoadingLeaderboard(true);
-        const result = await databaseService.getLeaderboard(10);
-        if (result.success) {
-          setLeaderboard(result.data);
-        }
+  // Mock user progress data
+  const [userProgress, setUserProgress] = useState({
+    xp: 1250,
+    streak: 7,
+    level: 12,
+    badges: ['quick-learner', 'streak-master', 'vocabulary-champion'],
+    wordsLearned: 342
+  });
+
+  const INTERFACE_LANGUAGES = {
+    en: { name: 'English', flag: '🇬🇧', rtl: false },
+    ar: { name: 'العربية', flag: '🇸🇦', rtl: true },
+    nl: { name: 'Nederlands', flag: '🇳🇱', rtl: false },
+    th: { name: 'ไทย', flag: '🇹🇭', rtl: false },
+    km: { name: 'ខ្មែរ', flag: '🇰🇭', rtl: false },
+    id: { name: 'Bahasa Indonesia', flag: '🇮🇩', rtl: false },
+    ms: { name: 'Bahasa Melayu', flag: '🇲🇾', rtl: false }
+  };
+
+  const LEARNING_LANGUAGES = {
+    es: { name: 'Arabic', flag: 'Ar' },
+    fr: { name: 'Bahasa Indonesia', flag: 'Bahasa' },
+    de: { name: 'Dutch', flag: 'Dutch' },
+    it: { name: 'Malay', flag: 'Malay' },
+    pt: { name: 'Thai', flag: 'Thai' },
+    ja: { name: 'Khmer', flag: 'Khmer' },
+    ko: { name: 'English', flag: 'En' },
+  };
+
+  const ACHIEVEMENTS = [
+    { id: 'quick-learner', name: 'Quick Learner', description: 'Complete 10 lessons in one day', icon: Zap, color: 'text-yellow-400' },
+    { id: 'streak-master', name: 'Streak Master', description: 'Maintain a 7-day streak', icon: Flame, color: 'text-orange-400' },
+    { id: 'vocabulary-champion', name: 'Vocabulary Champion', description: 'Learn 300+ words', icon: Crown, color: 'text-purple-400' },
+    { id: 'perfect-score', name: 'Perfect Score', description: 'Get 100% in 5 lessons', icon: Star, color: 'text-blue-400' },
+    { id: 'social-butterfly', name: 'Social Butterfly', description: 'Join the leaderboard', icon: Users, color: 'text-pink-400' }
+  ];
+
+  // Load leaderboard data
+  useEffect(() => {
+    const loadLeaderboard = async () => {
+      setIsLoadingLeaderboard(true);
+      // Simulate API call
+      setTimeout(() => {
+        setLeaderboard([
+          { id: 1, displayName: 'Sarah Chen', level: 15, xp: 2340 },
+          { id: 2, displayName: 'Alex Rodriguez', level: 14, xp: 2180 },
+          { id: 3, displayName: 'You', level: 12, xp: 1250 },
+          { id: 4, displayName: 'Emma Wilson', level: 11, xp: 1120 },
+          { id: 5, displayName: 'Michael Brown', level: 10, xp: 980 }
+        ]);
         setIsLoadingLeaderboard(false);
-      };
-      loadLeaderboard();
-    }, []);
-
-    const handleSettingChange = async (setting, value) => {
-      const newSettings = { ...userSettings, [setting]: value };
-      setUserSettings(newSettings);
-      await authService.updateSettings({ [setting]: value });
+      }, 1000);
     };
+    loadLeaderboard();
+  }, []);
 
-    const LessonsTab = () => {
-      const { user } = useUser();
-      const [lessons, setLessons] = useState([]);
-      const [activeLang, setActiveLang] = useState(user?.learningLanguages[0] || "English");
-
-      useEffect(() => {
-        const fetchLessons = async () => {
-          if (!user) return;
-          const q = query(collection(db, "lessons"), where("language", "==", activeLang));
-          const snapshot = await getDocs(q);
-          setLessons(snapshot.docs.map(doc => doc.data()));
-        };
-        fetchLessons();
-      }, [activeLang, user]);
-
-      if (!user) return null;
-
-      return (
-        <div>
-          {/* Language Tabs */}
-          {user.learningLanguages.map(lang => (
-            <button key={lang} onClick={() => setActiveLang(lang)}>{lang}</button>
-          ))}
-
-          {/* Lessons List */}
-          <ul>
-            {lessons.map((lesson) => (
-              <li key={lesson.lessonId}>
-                <h3>{lesson.title}</h3>
-                <p>{lesson.content}</p>
-                <audio controls src={lesson.audioUrl}></audio>
-              </li>
-            ))}
-          </ul>
-        </div>
-      );
-    };
-    const LanguageSettings = () => {
-
-      const handleLanguageChange = async (newLanguage) => {
-        const auth = getAuth();
-        const user = auth.currentUser;
-
-        if (!user) {
-          alert("Please login to change setting.");
-          return;
-        }
-
-        try {
-          await AuthService.updateBaseLanguage(user.uid, newLanguage);
-          console.log("Language updated:", newLanguage);
-          alert(`Language ${newLanguage} updated.`);
-        } catch (error) {
-          console.error("Language update error:", error);
-          alert("Language update failed. Please try again.");
-        }
-      };
-
-      return (
-        <div>
-          <h2>Language Settings</h2>
-          <button onClick={() => handleLanguageChange("English")}>
-            English
-          </button>
-          <button onClick={() => handleLanguageChange("Arabic")}>
-            Arabic
-          </button>
-          <button onClick={() => handleLanguageChange("Bangla")}>
-            Bangla
-          </button>
-        </div>
-      );
-    };
-    const handleLanguageChange = async (newLanguage) => {
-      const auth = getAuth();
-      const user = auth.currentUser;
-
-      if (!user) {
-        // User is not logged in
-        alert("Please login to change setting.");
-        return;
+  const handleLanguageChange = async (type, language) => {
+    if (type === 'base') {
+      setSelectedLanguage(language);
+      const sizeMap = { small: 'text-sm', medium: 'text-base', large: 'text-lg' };
+      setFontSize(sizeMap[userSettings.fontSize]);
+    } else {
+      if (learningLanguages.includes(language)) {
+        setLearningLanguages(learningLanguages.filter(l => l !== language));
+      } else {
+        setLearningLanguages([...learningLanguages, language]);
       }
+    }
+  };
 
-      try {
-        // If user is logged in, update the language
-        await AuthService.updateBaseLanguage(user.uid, newLanguage);
-        console.log("Language updated:", newLanguage);
-      } catch (error) {
-        console.error("Language update error:", error);
-        alert("Language update failed. Please try again.");
-      }
-    };
-    return (
-      <div className={`space-y-6 ${currentLanguage?.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage?.rtl ? 'rtl' : 'ltr'}>
-        <div className="flex items-center justify-between">
-          <h1 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-lg' ? 'text-2xl' : 'text-3xl'}`}>
-            {t('profile')}
-          </h1>
+  const handleSettingChange = (setting, value) => {
+    setUserSettings({ ...userSettings, [setting]: value });
+    if (setting === 'fontSize') {
+      const sizeMap = { small: 'text-sm', medium: 'text-base', large: 'text-lg' };
+      setFontSize(sizeMap[value]);
+    }
+  };
+
+  const currentLanguage = INTERFACE_LANGUAGES[selectedLanguage];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 md:p-8">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-2xl' : fontSize === 'text-base' ? 'text-3xl' : 'text-4xl'}`}>
+              Profile
+            </h1>
+            <p className="text-slate-400 mt-1">Track your progress and customize your experience</p>
+          </div>
+          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+            M
+          </div>
         </div>
 
-        {/* Profile Tabs */}
-        <div className="bg-slate-800/50 rounded-xl p-1">
-          <div className="flex space-x-1">
+        {/* Premium Tab Navigation */}
+        <div className="mb-8 bg-slate-800/50 backdrop-blur-lg rounded-2xl p-2 shadow-xl border border-slate-700/50">
+          <div className="grid grid-cols-3 gap-2">
             {[
-              { id: 'stats', label: 'Stats' },
-              { id: 'settings', label: 'Settings' },
-              { id: 'leaderboard', label: 'Leaderboard' }
+              { id: 'stats', label: 'Stats', icon: TrendingUp },
+              { id: 'settings', label: 'Settings', icon: Settings },
+              { id: 'leaderboard', label: 'Leaderboard', icon: Trophy }
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${activeTab === tab.id
-                  ? 'bg-blue-600 text-white'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
-                  }`}
+                className={`flex items-center justify-center gap-2 py-4 px-6 rounded-xl font-semibold transition-all duration-300 ${
+                  activeTab === tab.id
+                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/30'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                }`}
               >
-                {tab.label}
+                <tab.icon size={20} />
+                <span className="hidden sm:inline">{tab.label}</span>
               </button>
             ))}
           </div>
@@ -2214,195 +2211,283 @@ const LanguageLearningMVP = () => {
 
         {/* Stats Tab */}
         {activeTab === 'stats' && (
-          <>
-            {/* User Stats */}
-            <div className="bg-gradient-to-br from-blue-900 to-purple-900 rounded-2xl p-6 text-white">
-              <div className="text-center mb-6">
-                <div className="w-20 h-20 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-3">
-                  {authService.getCurrentUser()?.displayName?.charAt(0) || 'U'}
+          <div className="space-y-6">
+            {/* User Profile Card */}
+            <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-purple-700 rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32" />
+              <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-24 -translate-x-24" />
+              
+              <div className="relative z-10">
+                <div className="flex flex-col md:flex-row items-center md:items-start gap-6 mb-8">
+                  <div className="w-24 h-24 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-3xl flex items-center justify-center text-3xl font-bold shadow-xl">
+                    M
+                  </div>
+                  <div className="text-center md:text-left flex-1">
+                    <h2 className={`font-bold mb-2 ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-base' ? 'text-2xl' : 'text-3xl'}`}>
+                      Mohamed el Morabit
+                    </h2>
+                    <p className="text-blue-200 text-lg">Language Explorer</p>
+                    <div className="flex flex-wrap gap-2 mt-3 justify-center md:justify-start">
+                      {learningLanguages.map((lang) => (
+                        <span key={lang} className="px-3 py-1 bg-white/20 backdrop-blur rounded-full text-sm font-medium">
+                          {LEARNING_LANGUAGES[lang]?.flag} {LEARNING_LANGUAGES[lang]?.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <h2 className={`font-bold mb-1 ${fontSize === 'text-sm' ? 'text-lg' : fontSize === 'text-lg' ? 'text-xl' : 'text-2xl'}`}>
-                  {authService.getCurrentUser()?.displayName || 'User'}
-                </h2>
-                <p className="text-blue-200">Language Explorer</p>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-4 bg-white/10 rounded-xl">
-                  <Zap className="text-yellow-400 mx-auto mb-2" size={24} />
-                  <div className="text-2xl font-bold">{userProgress.xp}</div>
-                  <div className="text-sm text-blue-200">Total XP</div>
-                </div>
-                <div className="text-center p-4 bg-white/10 rounded-xl">
-                  <Flame className="text-orange-400 mx-auto mb-2" size={24} />
-                  <div className="text-2xl font-bold">{userProgress.streak}</div>
-                  <div className="text-sm text-blue-200">Day Streak</div>
-                </div>
-                <div className="text-center p-4 bg-white/10 rounded-xl">
-                  <Trophy className="text-yellow-400 mx-auto mb-2" size={24} />
-                  <div className="text-2xl font-bold">{userProgress.level}</div>
-                  <div className="text-sm text-blue-200">Level</div>
-                </div>
-                <div className="text-center p-4 bg-white/10 rounded-xl">
-                  <Award className="text-purple-400 mx-auto mb-2" size={24} />
-                  <div className="text-2xl font-bold">{userProgress.badges.length}</div>
-                  <div className="text-sm text-blue-200">Badges</div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center p-5 bg-white/10 backdrop-blur rounded-2xl border border-white/10 hover:bg-white/15 transition-all">
+                    <Zap className="text-yellow-400 mx-auto mb-3" size={28} />
+                    <div className="text-3xl font-bold mb-1">{userProgress.xp}</div>
+                    <div className="text-sm text-blue-200">Total XP</div>
+                  </div>
+                  <div className="text-center p-5 bg-white/10 backdrop-blur rounded-2xl border border-white/10 hover:bg-white/15 transition-all">
+                    <Flame className="text-orange-400 mx-auto mb-3" size={28} />
+                    <div className="text-3xl font-bold mb-1">{userProgress.streak}</div>
+                    <div className="text-sm text-blue-200">Day Streak</div>
+                  </div>
+                  <div className="text-center p-5 bg-white/10 backdrop-blur rounded-2xl border border-white/10 hover:bg-white/15 transition-all">
+                    <Trophy className="text-yellow-400 mx-auto mb-3" size={28} />
+                    <div className="text-3xl font-bold mb-1">{userProgress.level}</div>
+                    <div className="text-sm text-blue-200">Level</div>
+                  </div>
+                  <div className="text-center p-5 bg-white/10 backdrop-blur rounded-2xl border border-white/10 hover:bg-white/15 transition-all">
+                    <Award className="text-purple-400 mx-auto mb-3" size={28} />
+                    <div className="text-3xl font-bold mb-1">{userProgress.badges.length}</div>
+                    <div className="text-sm text-blue-200">Badges</div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Learning Languages */}
-            <div className="bg-slate-800 rounded-2xl p-6">
-              <h3 className={`font-bold text-white mb-4 ${fontSize === 'text-sm' ? 'text-lg' : fontSize === 'text-lg' ? 'text-xl' : 'text-2xl'}`}>
-                Learning Languages
-              </h3>
-              <div className="flex flex-wrap gap-3">
-                {learningLanguages.map((lang) => (
-                  <div key={lang} className="flex items-center space-x-2 bg-blue-600/20 text-blue-300 px-4 py-2 rounded-lg">
-                    <span className="text-lg">{LEARNING_LANGUAGES[lang]?.flag}</span>
-                    <span className="font-medium">{LEARNING_LANGUAGES[lang]?.name}</span>
-                  </div>
-                ))}
+            {/* Learning Stats */}
+            <div className="bg-slate-800/70 backdrop-blur-lg rounded-3xl p-8 shadow-xl border border-slate-700/50">
+              <div className="flex items-center gap-3 mb-6">
+                <TrendingUp className="text-blue-400" size={28} />
+                <h3 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-base' ? 'text-2xl' : 'text-3xl'}`}>
+                  Learning Stats
+                </h3>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div className="text-center">
+                  <div className="text-4xl font-bold text-white mb-2">{userProgress.xp}</div>
+                  <div className="text-slate-400">Total XP</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-4xl font-bold text-white mb-2">{userProgress.streak}</div>
+                  <div className="text-slate-400">Day Streak</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-4xl font-bold text-white mb-2">{userProgress.wordsLearned}</div>
+                  <div className="text-slate-400">Words Learned</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-4xl font-bold text-white mb-2">{userProgress.level}</div>
+                  <div className="text-slate-400">Level</div>
+                </div>
               </div>
             </div>
 
             {/* Achievements */}
-            <div className="bg-slate-800 rounded-2xl p-6">
-              <h3 className={`font-bold text-white mb-4 ${fontSize === 'text-sm' ? 'text-lg' : fontSize === 'text-lg' ? 'text-xl' : 'text-2xl'}`}>
-                {t('achievements')}
-              </h3>
-              <div className="space-y-3">
-                {userProgress.badges.length > 0 ? (
-                  userProgress.badges.map((badge, index) => (
-                    <div key={index} className="flex items-center p-3 bg-slate-700/50 rounded-lg">
-                      <Award className="text-yellow-400 mr-3" size={20} />
-                      <div>
-                        <div className="font-medium text-white">{badge.replace('-', ' ').toUpperCase()}</div>
-                        <div className="text-sm text-slate-400">Achievement unlocked!</div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-slate-400 text-center py-4">No achievements yet. Keep learning!</p>
-                )}
+            <div className="bg-slate-800/70 backdrop-blur-lg rounded-3xl p-8 shadow-xl border border-slate-700/50">
+              <div className="flex items-center gap-3 mb-6">
+                <Award className="text-yellow-400" size={28} />
+                <h3 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-base' ? 'text-2xl' : 'text-3xl'}`}>
+                  Achievements
+                </h3>
               </div>
+              <div className="grid gap-4">
+                {ACHIEVEMENTS.map((achievement) => {
+                  const isUnlocked = userProgress.badges.includes(achievement.id);
+                  const Icon = achievement.icon;
+                  return (
+                    <div
+                      key={achievement.id}
+                      className={`flex items-center gap-4 p-5 rounded-2xl border-2 transition-all ${
+                        isUnlocked
+                          ? 'bg-gradient-to-r from-slate-700/50 to-slate-600/30 border-blue-500/50 shadow-lg shadow-blue-500/10'
+                          : 'bg-slate-700/30 border-slate-600/30 opacity-60'
+                      }`}
+                    >
+                      <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${isUnlocked ? 'bg-gradient-to-br from-blue-500 to-purple-600' : 'bg-slate-600'}`}>
+                        <Icon className={isUnlocked ? achievement.color : 'text-slate-400'} size={28} />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-semibold text-white text-lg">{achievement.name}</div>
+                        <div className="text-slate-400 text-sm">{achievement.description}</div>
+                      </div>
+                      {isUnlocked && (
+                        <Check className="text-green-400" size={24} />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              {userProgress.badges.length === 0 && (
+                <p className="text-slate-400 text-center py-8">No achievements yet. Keep learning to unlock them!</p>
+              )}
             </div>
-          </>
+          </div>
         )}
 
         {/* Settings Tab */}
         {activeTab === 'settings' && (
           <div className="space-y-6">
-            {/* Interface Language */}
-            <div className="bg-slate-800 rounded-2xl p-6">
-              <h3 className={`font-bold text-white mb-4 ${fontSize === 'text-sm' ? 'text-lg' : fontSize === 'text-lg' ? 'text-xl' : 'text-2xl'}`}>
-                Interface Language
-              </h3>
-              <div className="grid grid-cols-2 gap-3">
+            {/* Language Settings */}
+            <div className="bg-slate-800/70 backdrop-blur-lg rounded-3xl p-8 shadow-xl border border-slate-700/50">
+              <div className="flex items-center gap-3 mb-6">
+                <Globe className="text-blue-400" size={28} />
+                <h3 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-base' ? 'text-2xl' : 'text-3xl'}`}>
+                  Interface Language
+                </h3>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {Object.entries(INTERFACE_LANGUAGES).map(([key, lang]) => (
                   <button
                     key={key}
                     onClick={() => handleLanguageChange('base', key)}
-                    className={`p-4 rounded-xl border-2 transition-all ${selectedLanguage === key
-                      ? 'border-blue-500 bg-blue-500/20 text-blue-300'
-                      : 'border-slate-600 bg-slate-700/50 text-slate-300 hover:border-slate-500'
-                      }`}
+                    className={`p-5 rounded-2xl border-2 transition-all duration-300 ${
+                      selectedLanguage === key
+                        ? 'border-blue-500 bg-gradient-to-br from-blue-500/20 to-purple-500/20 shadow-lg shadow-blue-500/20'
+                        : 'border-slate-600 bg-slate-700/30 hover:border-slate-500 hover:bg-slate-700/50'
+                    }`}
                   >
-                    <div className="text-2xl mb-2">{lang.flag}</div>
-                    <div className="font-medium">{lang.name}</div>
+                    <div className="text-4xl mb-3">{lang.flag}</div>
+                    <div className={`font-semibold ${selectedLanguage === key ? 'text-blue-300' : 'text-slate-300'}`}>
+                      {lang.name}
+                    </div>
+                    {selectedLanguage === key && (
+                      <Check className="text-blue-400 mx-auto mt-2" size={20} />
+                    )}
                   </button>
                 ))}
               </div>
             </div>
 
             {/* Learning Languages */}
-            <div className="bg-slate-800 rounded-2xl p-6">
-              <h3 className={`font-bold text-white mb-4 ${fontSize === 'text-sm' ? 'text-lg' : fontSize === 'text-lg' ? 'text-xl' : 'text-2xl'}`}>
-                Learning Languages
-              </h3>
-              <div className="grid grid-cols-2 gap-3">
+            <div className="bg-slate-800/70 backdrop-blur-lg rounded-3xl p-8 shadow-xl border border-slate-700/50">
+              <div className="flex items-center gap-3 mb-6">
+                <Globe className="text-purple-400" size={28} />
+                <h3 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-base' ? 'text-2xl' : 'text-3xl'}`}>
+                  Learning Languages
+                </h3>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {Object.entries(LEARNING_LANGUAGES).map(([key, lang]) => (
                   <button
                     key={key}
                     onClick={() => handleLanguageChange('learning', key)}
-                    className={`p-4 rounded-xl border-2 transition-all ${learningLanguages.includes(key)
-                      ? 'border-blue-500 bg-blue-500/20 text-blue-300'
-                      : 'border-slate-600 bg-slate-700/50 text-slate-300 hover:border-slate-500'
-                      }`}
+                    className={`p-5 rounded-2xl border-2 transition-all duration-300 ${
+                      learningLanguages.includes(key)
+                        ? 'border-purple-500 bg-gradient-to-br from-purple-500/20 to-pink-500/20 shadow-lg shadow-purple-500/20'
+                        : 'border-slate-600 bg-slate-700/30 hover:border-slate-500 hover:bg-slate-700/50'
+                    }`}
                   >
-                    <div className="text-2xl mb-2">{lang.flag}</div>
-                    <div className="font-medium">{lang.name}</div>
+                    <div className="text-4xl mb-3">{lang.flag}</div>
+                    <div className={`font-semibold ${learningLanguages.includes(key) ? 'text-purple-300' : 'text-slate-300'}`}>
+                      {lang.name}
+                    </div>
+                    {learningLanguages.includes(key) && (
+                      <Check className="text-purple-400 mx-auto mt-2" size={20} />
+                    )}
                   </button>
                 ))}
               </div>
             </div>
 
             {/* App Settings */}
-            <div className="bg-slate-800 rounded-2xl p-6">
-              <h3 className={`font-bold text-white mb-4 ${fontSize === 'text-sm' ? 'text-lg' : fontSize === 'text-lg' ? 'text-xl' : 'text-2xl'}`}>
-                App Settings
-              </h3>
-              <div className="space-y-4">
+            <div className="bg-slate-800/70 backdrop-blur-lg rounded-3xl p-8 shadow-xl border border-slate-700/50">
+              <div className="flex items-center gap-3 mb-6">
+                <Settings className="text-green-400" size={28} />
+                <h3 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-base' ? 'text-2xl' : 'text-3xl'}`}>
+                  App Settings
+                </h3>
+              </div>
+              <div className="space-y-5">
                 {/* Dark Mode */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium text-white">Dark Mode</div>
-                    <div className="text-sm text-slate-400">Toggle dark/light theme</div>
+                <div className="flex items-center justify-between p-5 bg-slate-700/30 rounded-2xl hover:bg-slate-700/50 transition-all">
+                  <div className="flex items-center gap-4">
+                    {userSettings.darkMode ? <Moon size={24} className="text-blue-400" /> : <Sun size={24} className="text-yellow-400" />}
+                    <div>
+                      <div className="font-semibold text-white text-lg">Dark Mode</div>
+                      <div className="text-sm text-slate-400">Toggle dark/light theme</div>
+                    </div>
                   </div>
                   <button
                     onClick={() => handleSettingChange('darkMode', !userSettings.darkMode)}
-                    className={`w-12 h-6 rounded-full transition-colors ${userSettings.darkMode ? 'bg-blue-600' : 'bg-slate-600'
-                      }`}
+                    className={`w-16 h-8 rounded-full transition-all duration-300 relative ${
+                      userSettings.darkMode ? 'bg-blue-600' : 'bg-slate-600'
+                    }`}
                   >
-                    <div className={`w-5 h-5 bg-white rounded-full transition-transform ${userSettings.darkMode ? 'translate-x-6' : 'translate-x-0.5'
-                      }`} />
+                    <div
+                      className={`w-6 h-6 bg-white rounded-full shadow-lg transition-transform duration-300 absolute top-1 ${
+                        userSettings.darkMode ? 'translate-x-9' : 'translate-x-1'
+                      }`}
+                    />
                   </button>
                 </div>
 
                 {/* Notifications */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium text-white">Notifications</div>
-                    <div className="text-sm text-slate-400">Enable push notifications</div>
+                <div className="flex items-center justify-between p-5 bg-slate-700/30 rounded-2xl hover:bg-slate-700/50 transition-all">
+                  <div className="flex items-center gap-4">
+                    <Bell size={24} className="text-orange-400" />
+                    <div>
+                      <div className="font-semibold text-white text-lg">Notifications</div>
+                      <div className="text-sm text-slate-400">Enable push notifications</div>
+                    </div>
                   </div>
                   <button
                     onClick={() => handleSettingChange('notifications', !userSettings.notifications)}
-                    className={`w-12 h-6 rounded-full transition-colors ${userSettings.notifications ? 'bg-blue-600' : 'bg-slate-600'
-                      }`}
+                    className={`w-16 h-8 rounded-full transition-all duration-300 relative ${
+                      userSettings.notifications ? 'bg-blue-600' : 'bg-slate-600'
+                    }`}
                   >
-                    <div className={`w-5 h-5 bg-white rounded-full transition-transform ${userSettings.notifications ? 'translate-x-6' : 'translate-x-0.5'
-                      }`} />
+                    <div
+                      className={`w-6 h-6 bg-white rounded-full shadow-lg transition-transform duration-300 absolute top-1 ${
+                        userSettings.notifications ? 'translate-x-9' : 'translate-x-1'
+                      }`}
+                    />
                   </button>
                 </div>
 
                 {/* Sound */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium text-white">Sound</div>
-                    <div className="text-sm text-slate-400">Enable audio feedback</div>
+                <div className="flex items-center justify-between p-5 bg-slate-700/30 rounded-2xl hover:bg-slate-700/50 transition-all">
+                  <div className="flex items-center gap-4">
+                    <Volume2 size={24} className="text-purple-400" />
+                    <div>
+                      <div className="font-semibold text-white text-lg">Sound</div>
+                      <div className="text-sm text-slate-400">Enable audio feedback</div>
+                    </div>
                   </div>
                   <button
                     onClick={() => handleSettingChange('sound', !userSettings.sound)}
-                    className={`w-12 h-6 rounded-full transition-colors ${userSettings.sound ? 'bg-blue-600' : 'bg-slate-600'
-                      }`}
+                    className={`w-16 h-8 rounded-full transition-all duration-300 relative ${
+                      userSettings.sound ? 'bg-blue-600' : 'bg-slate-600'
+                    }`}
                   >
-                    <div className={`w-5 h-5 bg-white rounded-full transition-transform ${userSettings.sound ? 'translate-x-6' : 'translate-x-0.5'
-                      }`} />
+                    <div
+                      className={`w-6 h-6 bg-white rounded-full shadow-lg transition-transform duration-300 absolute top-1 ${
+                        userSettings.sound ? 'translate-x-9' : 'translate-x-1'
+                      }`}
+                    />
                   </button>
                 </div>
 
                 {/* Font Size */}
-                <div>
-                  <div className="font-medium text-white mb-2">Font Size</div>
-                  <div className="flex space-x-2">
+                <div className="p-5 bg-slate-700/30 rounded-2xl">
+                  <div className="font-semibold text-white text-lg mb-4">Font Size</div>
+                  <div className="flex gap-3">
                     {['small', 'medium', 'large'].map((size) => (
                       <button
                         key={size}
                         onClick={() => handleSettingChange('fontSize', size)}
-                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${userSettings.fontSize === size
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                          }`}
+                        className={`flex-1 px-5 py-3 rounded-xl font-semibold transition-all duration-300 ${
+                          userSettings.fontSize === size
+                            ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                            : 'bg-slate-600/50 text-slate-300 hover:bg-slate-600'
+                        }`}
                       >
                         {size.charAt(0).toUpperCase() + size.slice(1)}
                       </button>
@@ -2414,52 +2499,67 @@ const LanguageLearningMVP = () => {
           </div>
         )}
 
-
+        {/* Leaderboard Tab */}
         {activeTab === 'leaderboard' && (
-          <div className="bg-slate-800 rounded-2xl p-6">
-            <h3
-              className={`font-bold text-white mb-4 ${fontSize === 'text-sm' ? 'text-lg' : fontSize === 'text-lg' ? 'text-xl' : 'text-2xl'
-                }`}
-            >
-              {t('weeklyLeaderboard')}
-            </h3>
+          <div className="bg-slate-800/70 backdrop-blur-lg rounded-3xl p-8 shadow-xl border border-slate-700/50">
+            <div className="flex items-center gap-3 mb-6">
+              <Trophy className="text-yellow-400" size={28} />
+              <h3 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-base' ? 'text-2xl' : 'text-3xl'}`}>
+                Weekly Leaderboard
+              </h3>
+            </div>
             {isLoadingLeaderboard ? (
-              <div className="text-center py-8">
-                <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                <p className="text-slate-400">Loading leaderboard...</p>
+              <div className="text-center py-12">
+                <div className="w-12 h-12 border-4 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                <p className="text-slate-400 text-lg">Loading leaderboard...</p>
               </div>
             ) : leaderboard.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {leaderboard.map((user, index) => (
-                  <div key={user.id} className="flex items-center p-3 bg-slate-700/50 rounded-lg">
+                  <div
+                    key={user.id}
+                    className={`flex items-center gap-5 p-6 rounded-2xl transition-all ${
+                      user.displayName === 'You'
+                        ? 'bg-gradient-to-r from-blue-600/30 to-purple-600/30 border-2 border-blue-500/50 shadow-lg shadow-blue-500/20'
+                        : 'bg-slate-700/40 hover:bg-slate-700/60'
+                    }`}
+                  >
                     <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold mr-3 ${index === 0
-                        ? 'bg-gradient-to-br from-yellow-400 to-orange-500'
-                        : index === 1
+                      className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg ${
+                        index === 0
+                          ? 'bg-gradient-to-br from-yellow-400 to-orange-500'
+                          : index === 1
                           ? 'bg-gradient-to-br from-gray-300 to-gray-500'
                           : index === 2
-                            ? 'bg-gradient-to-br from-orange-400 to-orange-600'
-                            : 'bg-slate-600'
-                        }`}
+                          ? 'bg-gradient-to-br from-orange-400 to-orange-600'
+                          : 'bg-slate-600'
+                      }`}
                     >
                       {index + 1}
                     </div>
                     <div className="flex-1">
-                      <div className="font-medium text-white">{user.displayName || 'Anonymous'}</div>
-                      <div className="text-sm text-slate-400">Level {user.level || 1}</div>
+                      <div className="font-semibold text-white text-lg">{user.displayName || 'Anonymous'}</div>
+                      <div className="text-slate-400">Level {user.level || 1}</div>
                     </div>
-                    <div className="text-yellow-400 font-bold">{user.xp || 0} XP</div>
+                    <div className="text-right">
+                      <div className="text-yellow-400 font-bold text-xl">{user.xp || 0}</div>
+                      <div className="text-slate-400 text-sm">XP</div>
+                    </div>
+                    {index < 3 && (
+                      <Trophy className={index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-400' : 'text-orange-400'} size={24} />
+                    )}
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-slate-400 text-center py-8">No data available yet.</p>
+              <p className="text-slate-400 text-center py-12 text-lg">No data available yet.</p>
             )}
           </div>
         )}
       </div>
-    );
-  };
+    </div>
+  );
+};
 
   const SettingsScreen = () => (
     <div className={`space-y-6 ${currentLanguage?.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage?.rtl ? 'rtl' : 'ltr'}>
