@@ -921,7 +921,6 @@ const LanguageLearningMVP = () => {
     { id: 'home', icon: Home, labelKey: 'home' },
     { id: 'lessons', icon: BookOpen, labelKey: 'lessonsNav' },
     { id: 'quiz', icon: Target, labelKey: 'quizNav' },
-    { id: 'tts-input', icon: Volume2, labelKey: 'ttsInput' },
     { id: 'ai-coach', icon: Brain, labelKey: 'aiCoachNav' },
     { id: 'profile', icon: User, labelKey: 'profileNav' }
   ], [t]);
@@ -931,7 +930,7 @@ const LanguageLearningMVP = () => {
   const speakText = useCallback(async (text, lang = 'english', options = {}) => {
     try {
       // Import enhanced TTS function (your custom module)
-      const { default: enhancedSpeakText } = await import('./TextToSpeech');
+      const { default: enhancedSpeakText } = await import('../TextToSpeech.js');
       return await enhancedSpeakText(text, lang, options);
     } catch (error) {
       console.error('TTS Error:', error);
@@ -1134,20 +1133,20 @@ const LanguageLearningMVP = () => {
 
   // Memoized Navigation Component
   const NavigationBar = React.memo(({ t }) => (
-    <nav className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900 to-slate-800 border-t border-slate-700 p-4 z-50">
-      <div className="flex justify-around items-center mx-auto">
+    <nav className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900 to-slate-800 border-t border-slate-700 p-2 sm:p-4 z-50">
+      <div className="flex justify-around items-center mx-auto max-w-md sm:max-w-none">
         {navItems.map(({ id, icon: Icon, labelKey }) => (
           <button
             key={id}
             onClick={() => setCurrentScreen(id)}
-            className={`flex flex-col items-center p-2 rounded-lg transition-all ${currentScreen === id
+            className={`flex flex-col items-center p-1 sm:p-2 rounded-lg transition-all min-w-0 flex-1 ${currentScreen === id
               ? 'text-blue-400 bg-slate-700/50'
               : 'text-slate-400 hover:text-white'
               }`}
             aria-label={`Navigate to ${t(labelKey)}`}
           >
-            <Icon size={20} />
-            <span className="text-xs mt-1">{t(labelKey)}</span>
+            <Icon size={16} className="sm:w-5 sm:h-5" />
+            <span className="text-xs mt-1 hidden sm:block">{t(labelKey)}</span>
           </button>
         ))}
       </div>
@@ -1155,7 +1154,7 @@ const LanguageLearningMVP = () => {
   ));
 
   const HomeScreen = () => (
-    <div className={`space-y-6 ${currentLanguage.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage.rtl ? 'rtl' : 'ltr'}>
+    <div className={`space-y-6 ${currentLanguage?.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage?.rtl ? 'rtl' : 'ltr'}>
       {/* Header */}
       <div className="bg-gradient-to-br from-blue-900 to-purple-900 rounded-2xl p-6 text-white">
         <div className="flex items-center justify-between mb-4 ">
@@ -1251,7 +1250,7 @@ const LanguageLearningMVP = () => {
     const vocab = VOCABULARY.beginner[activeTab] || VOCABULARY.beginner.english;
 
     return (
-      <div className={`space-y-6 ${currentLanguage.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage.rtl ? 'rtl' : 'ltr'}>
+      <div className={`space-y-6 ${currentLanguage?.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage?.rtl ? 'rtl' : 'ltr'}>
         <div className="flex items-center justify-between">
           <h1 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-lg' ? 'text-2xl' : 'text-3xl'}`}>
             {t('lessons')}
@@ -1316,7 +1315,7 @@ const LanguageLearningMVP = () => {
                   >
                     <div>
                       <div className={`font-medium text-white ${fontSize}`}>{item.word}</div>
-                      <div className={`text-sm text-slate-400 ${currentLanguage.rtl ? 'text-right' : 'text-left'}`}>
+                      <div className={`text-sm text-slate-400 ${currentLanguage?.rtl ? 'text-right' : 'text-left'}`}>
                         {item.translation}
                       </div>
                     </div>
@@ -1693,7 +1692,31 @@ const LanguageLearningMVP = () => {
     const [liveTranscript, setLiveTranscript] = useState('');
     const [grammarCorrections, setGrammarCorrections] = useState([]);
     const [pronunciationFeedback, setPronunciationFeedback] = useState('');
+    const [detectedLanguage, setDetectedLanguage] = useState('english');
     const recognitionRef = useRef(null);
+
+    // Auto language detection function
+    const detectLanguage = (text) => {
+      // Check for Arabic characters
+      if (/[\u0600-\u06FF]/.test(text)) {
+        return 'arabic';
+      }
+      // Check for other language patterns
+      if (/[àáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ]/.test(text)) {
+        return 'french';
+      }
+      if (/[ñáéíóúü]/.test(text)) {
+        return 'spanish';
+      }
+      if (/[äöüß]/.test(text)) {
+        return 'german';
+      }
+      if (/[àèéìíîòóù]/.test(text)) {
+        return 'italian';
+      }
+      // Default to English
+      return 'english';
+    };
 
     // Levenshtein distance for pronunciation similarity
     const levenshteinDistance = (str1, str2) => {
@@ -1940,6 +1963,9 @@ const LanguageLearningMVP = () => {
     }, [chatMessages, selectedLanguage, speakText]);
 
     const startRecording = useCallback(() => {
+      // Prevent multiple starts
+      if (isRecording) return;
+      
       setIsRecording(true);
       setIsAnalyzing(true);
       setPronunciationScore(null);
@@ -1948,7 +1974,14 @@ const LanguageLearningMVP = () => {
       setLiveTranscript('');
 
       if (recognitionRef.current) {
-        recognitionRef.current.start();
+        // Check if already started
+        try {
+          recognitionRef.current.start();
+        } catch (error) {
+          console.log('SpeechRecognition already started or not available');
+          setIsRecording(false);
+          setIsAnalyzing(false);
+        }
       } else {
         // Fallback simulation
         setTimeout(() => {
@@ -1965,11 +1998,15 @@ const LanguageLearningMVP = () => {
           }, 2000);
         }, 3000);
       }
-    }, [expectedText]);
+    }, [expectedText, isRecording]);
 
     const stopRecording = useCallback(() => {
       if (recognitionRef.current) {
-        recognitionRef.current.stop();
+        try {
+          recognitionRef.current.stop();
+        } catch (error) {
+          console.log('SpeechRecognition stop failed:', error);
+        }
       }
       setIsRecording(false);
       setIsAnalyzing(false);
@@ -1991,18 +2028,38 @@ const LanguageLearningMVP = () => {
     const sendMessage = useCallback(() => {
       if (!inputMessage.trim()) return;
 
+      // Auto-detect language from user input
+      const detectedLang = detectLanguage(inputMessage);
+      setDetectedLanguage(detectedLang);
+
       let corrected = inputMessage;
       const grammar = checkGrammar(inputMessage);
       if (grammar.length > 0) {
         corrected = grammar.reduce((text, corr) => text.replace(corr.error, corr.correction), inputMessage);
       }
 
+      // Generate language-specific response
+      const getLanguageResponse = (lang) => {
+        const responses = {
+          english: `Great! I detected you're speaking English. You said: "${inputMessage}". ${grammar.length > 0 ? `Corrected: "${corrected}".` : ''} Excellent pronunciation! What would you like to practice next?`,
+          arabic: `ممتاز! لقد اكتشفت أنك تتحدث العربية. قلت: "${inputMessage}". ${grammar.length > 0 ? `المصحح: "${corrected}".` : ''} نطق ممتاز! ماذا تريد أن تتدرب عليه بعد ذلك؟`,
+          french: `Excellent! J'ai détecté que vous parlez français. Vous avez dit: "${inputMessage}". ${grammar.length > 0 ? `Corrigé: "${corrected}".` : ''} Excellente prononciation! Que voulez-vous pratiquer ensuite?`,
+          spanish: `¡Excelente! Detecté que hablas español. Dijiste: "${inputMessage}". ${grammar.length > 0 ? `Corregido: "${corrected}".` : ''} ¡Excelente pronunciación! ¿Qué quieres practicar después?`,
+          dutch: `Geweldig! Ik heb gedetecteerd dat je Nederlands spreekt. Je zei: "${inputMessage}". ${grammar.length > 0 ? `Gecorrigeerd: "${corrected}".` : ''} Uitstekende uitspraak! Wat wil je daarna oefenen?`,
+          indonesian: `Bagus! Saya mendeteksi Anda berbicara bahasa Indonesia. Anda berkata: "${inputMessage}". ${grammar.length > 0 ? `Dikoreksi: "${corrected}".` : ''} Pengucapan yang bagus! Apa yang ingin Anda latih selanjutnya?`,
+          malay: `Bagus! Saya mengesan anda bercakap bahasa Melayu. Anda berkata: "${inputMessage}". ${grammar.length > 0 ? `Dibetulkan: "${corrected}".` : ''} Sebutan yang bagus! Apa yang anda mahu latih seterusnya?`,
+          thai: `ยอดเยี่ยม! ฉันตรวจพบว่าคุณพูดภาษาไทย คุณพูดว่า: "${inputMessage}". ${grammar.length > 0 ? `แก้ไขแล้ว: "${corrected}".` : ''} การออกเสียงยอดเยี่ยม! คุณต้องการฝึกอะไรต่อไป?`,
+          khmer: `ល្អណាស់! ខ្ញុំបានរកឃើញថាអ្នកនិយាយភាសាខ្មែរ។ អ្នកបាននិយាយថា: "${inputMessage}". ${grammar.length > 0 ? `បានកែតម្រូវ: "${corrected}".` : ''} ការបញ្ចេញសំឡេងល្អណាស់! អ្នកចង់អនុវត្តអ្វីបន្តទៀត?`
+        };
+        return responses[lang] || responses.english;
+      };
+
       setChatMessages(prev => [
         ...prev,
         { type: 'user', message: inputMessage },
         {
           type: 'ai',
-          message: `You said: "${inputMessage}". ${grammar.length > 0 ? `Corrected: "${corrected}".` : ''} Great job! What would you like to practice next?`
+          message: getLanguageResponse(detectedLang)
         }
       ]);
       setInputMessage('');
@@ -2266,7 +2323,7 @@ const LanguageLearningMVP = () => {
       }
     };
     return (
-      <div className={`space-y-6 ${currentLanguage.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage.rtl ? 'rtl' : 'ltr'}>
+      <div className={`space-y-6 ${currentLanguage?.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage?.rtl ? 'rtl' : 'ltr'}>
         <div className="flex items-center justify-between">
           <h1 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-lg' ? 'text-2xl' : 'text-3xl'}`}>
             {t('profile')}
@@ -2545,7 +2602,7 @@ const LanguageLearningMVP = () => {
   };
 
   const SettingsScreen = () => (
-    <div className={`space-y-6 ${currentLanguage.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage.rtl ? 'rtl' : 'ltr'}>
+    <div className={`space-y-6 ${currentLanguage?.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage?.rtl ? 'rtl' : 'ltr'}>
       <div className="flex items-center justify-between">
         <button
           onClick={() => setCurrentScreen('home')}
@@ -2711,7 +2768,7 @@ const LanguageLearningMVP = () => {
     }, [testStep]);
 
     return (
-      <div className={`space-y-6 ${currentLanguage.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage.rtl ? 'rtl' : 'ltr'}>
+      <div className={`space-y-6 ${currentLanguage?.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage?.rtl ? 'rtl' : 'ltr'}>
         <div className="text-center">
           <h1 className={`font-bold text-white mb-2 ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-lg' ? 'text-2xl' : 'text-3xl'}`}>
             {t('placementTest')}
@@ -2937,7 +2994,7 @@ const LanguageLearningMVP = () => {
     };
 
     return (
-      <div className={`space-y-6 p-4 sm:p-6 w-full mx-auto ${currentLanguage.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage.rtl ? 'rtl' : 'ltr'}>
+      <div className={`space-y-6 p-4 sm:p-6 w-full mx-auto ${currentLanguage?.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage?.rtl ? 'rtl' : 'ltr'}>
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1
@@ -3176,136 +3233,7 @@ const LanguageLearningMVP = () => {
   };
 
   // TTS Input Component
-  const TTSInputScreen = () => {
-    const [inputText, setInputText] = useState('');
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [selectedTTSLanguage, setSelectedTTSLanguage] = useState(selectedLanguage);
 
-    const handleSpeak = async () => {
-      if (!inputText.trim()) return;
-
-      setIsPlaying(true);
-      try {
-        await speakText(inputText, selectedTTSLanguage);
-      } catch (error) {
-        console.error('TTS Error:', error);
-      } finally {
-        // Reset playing state after a delay
-        setTimeout(() => setIsPlaying(false), 2000);
-      }
-    };
-
-    const handleKeyPress = (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        handleSpeak();
-      }
-    };
-
-    return (
-      <div className={`space-y-6 p-4 ${currentLanguage.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage.rtl ? 'rtl' : 'ltr'}>
-        {/* Header */}
-        <div className="text-center">
-          <h1 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-lg' ? 'text-2xl' : 'text-3xl'}`}>
-            {t('ttsInput')}
-          </h1>
-          <p className="text-slate-400 mt-2">{t('typeTextToSpeak')}</p>
-        </div>
-
-        {/* Language Selector */}
-        <div className="bg-slate-800/50 rounded-xl p-4">
-          <h3 className="text-white font-medium mb-3 flex items-center">
-            <Globe className="w-5 h-5 mr-2" />
-            {t('selectLanguage')}
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {Object.entries(INTERFACE_LANGUAGES).map(([key, lang]) => (
-              <button
-                key={key}
-                onClick={() => setSelectedTTSLanguage(key)}
-                className={`p-3 rounded-lg border-2 transition-all ${selectedTTSLanguage === key
-                  ? 'border-blue-500 bg-blue-500/20 text-blue-300'
-                  : 'border-slate-600 bg-slate-700/50 text-slate-300 hover:border-slate-500'
-                  }`}
-                aria-pressed={selectedTTSLanguage === key}
-              >
-                <div className="text-2xl mb-1">{lang.flag}</div>
-                <div className="text-xs font-medium">{lang.name}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Text Input Area */}
-        <div className="bg-slate-800/50 rounded-xl p-4">
-          <label htmlFor="tts-input" className="block text-white font-medium mb-3">
-            {t('typeTextToSpeak')}
-          </label>
-          <div className="space-y-4">
-            <textarea
-              id="tts-input"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder={t('typeTextToSpeak')}
-              className={`w-full p-4 rounded-lg bg-slate-700/50 border border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none ${currentLanguage.rtl ? 'text-right' : 'text-left'
-                } ${fontSize}`}
-              rows={4}
-              dir={INTERFACE_LANGUAGES[selectedTTSLanguage]?.rtl ? 'rtl' : 'ltr'}
-            />
-
-            {/* Play Button */}
-            <div className="flex justify-center">
-              <button
-                onClick={handleSpeak}
-                disabled={!inputText.trim() || isPlaying}
-                className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-medium transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 ${!inputText.trim() || isPlaying
-                  ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-500 hover:to-purple-500'
-                  }`}
-              >
-                {isPlaying ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                    <span>Playing...</span>
-                  </>
-                ) : (
-                  <>
-                    <Volume2 className="w-5 h-5" />
-                    <span>{t('playAudio')}</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Examples */}
-        <div className="bg-slate-800/50 rounded-xl p-4">
-          <h3 className="text-white font-medium mb-3">Quick Examples</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {(() => {
-              const examples = {
-                english: ['Hello, how are you?', 'Good morning!', 'Thank you very much.'],
-                arabic: ['مرحبا، كيف حالك؟', 'صباح الخير!', 'شكرا جزيلا.'],
-                french: ['Bonjour, comment allez-vous?', 'Bonjour!', 'Merci beaucoup.'],
-                spanish: ['Hola, ¿cómo estás?', '¡Buenos días!', 'Muchas gracias.']
-              };
-              return examples[selectedTTSLanguage]?.map((example, index) => (
-                <button
-                  key={index}
-                  onClick={() => setInputText(example)}
-                  className="p-3 text-left bg-slate-700/50 rounded-lg text-slate-300 hover:bg-slate-600/50 transition-colors"
-                >
-                  {example}
-                </button>
-              ));
-            })()}
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   // Main render function
   const renderScreen = () => {
@@ -3313,7 +3241,6 @@ const LanguageLearningMVP = () => {
       case 'home': return <HomeScreen />;
       case 'lessons': return <LessonsScreen />;
       case 'quiz': return <QuizScreenEnhanced selectedLanguage={selectedLanguage} onFinish={(score, total) => setQuizScore(score)} />;
-      case 'tts-input': return <TTSInputScreen />;
       case 'ai-coach': return <AICoachScreen t={t} selectedLanguage={selectedLanguage} speakText={speakText} fontSize={fontSize} />;
       case 'profile': return <ProfileScreen />;
       case 'settings': return <SettingsScreen />;

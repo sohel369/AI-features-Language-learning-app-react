@@ -1,8 +1,9 @@
 // QuizScreen.js
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import { Volume2, Check, X } from "lucide-react";
 import speakText from "./TextToSpeech"; // Google TTS function
-
+import EnhancedConfetti from "./components/EnhancedConfetti";
+   
 // Quiz questions for different languages
 const QUIZ_QUESTIONS = {
   english: [
@@ -182,6 +183,8 @@ const QuizScreen = ({ selectedLanguage = "english", onFinish }) => {
   const [userAnswer, setUserAnswer] = useState("");
   const [showResult, setShowResult] = useState(false);
   const [quizScore, setQuizScore] = useState(0);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const confettiTimeoutRef = useRef(null);
 
   // Ensure questions array exists
   const questions = QUIZ_QUESTIONS[selectedLanguage] || QUIZ_QUESTIONS.english;
@@ -205,6 +208,17 @@ const QuizScreen = ({ selectedLanguage = "english", onFinish }) => {
 
       if (isCorrect) {
         setQuizScore((prev) => prev + 1);
+        // Clear any existing timeout
+        if (confettiTimeoutRef.current) {
+          clearTimeout(confettiTimeoutRef.current);
+        }
+        // Trigger confetti animation for correct answers
+        setShowConfetti(true);
+        // Stop confetti after 3 seconds
+        confettiTimeoutRef.current = setTimeout(() => {
+          setShowConfetti(false);
+          confettiTimeoutRef.current = null;
+        }, 3000);
       }
 
       // Speak selected answer
@@ -229,9 +243,20 @@ const QuizScreen = ({ selectedLanguage = "english", onFinish }) => {
     const isCorrect = userAns === correctAnswer;
 
     setSelectedAnswer(userAnswer);
-    if (isCorrect) {
-      setQuizScore((prev) => prev + 1);
-    }
+      if (isCorrect) {
+        setQuizScore((prev) => prev + 1);
+        // Clear any existing timeout
+        if (confettiTimeoutRef.current) {
+          clearTimeout(confettiTimeoutRef.current);
+        }
+        // Trigger confetti animation for correct answers
+        setShowConfetti(true);
+        // Stop confetti after 3 seconds
+        confettiTimeoutRef.current = setTimeout(() => {
+          setShowConfetti(false);
+          confettiTimeoutRef.current = null;
+        }, 3000);
+      }
 
     // Speak user's answer
     const lang = /[\u0600-\u06FF]/.test(userAnswer) ? "arabic" : selectedLanguage;
@@ -242,6 +267,12 @@ const QuizScreen = ({ selectedLanguage = "english", onFinish }) => {
     setSelectedAnswer(null);
     setUserAnswer("");
     setShowResult(false);
+    setShowConfetti(false);
+    // Clear any pending confetti timeout
+    if (confettiTimeoutRef.current) {
+      clearTimeout(confettiTimeoutRef.current);
+      confettiTimeoutRef.current = null;
+    }
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion((prev) => prev + 1);
     } else {
@@ -259,6 +290,11 @@ const QuizScreen = ({ selectedLanguage = "english", onFinish }) => {
 
   return (
     <div className="space-y-6 p-4">
+      {/* Confetti Animation */}
+      <EnhancedConfetti 
+        show={showConfetti} 
+        onComplete={() => setShowConfetti(false)} 
+      />
       <h2 className="text-white text-2xl font-bold">
         Question {currentQuestion + 1}/{questions.length}
       </h2>

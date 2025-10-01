@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backend TTS Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        .test-section {
+            background: #2a2a2a;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .arabic-text {
+            font-size: 24px;
+            text-align: right;
+            direction: rtl;
+            margin: 10px 0;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background: #4CAF50;
+        }
+        .error {
+            background: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Backend TTS Test</h1>
+    
+    <div class="test-section">
+        <h2>Server Status</h2>
+        <button onclick="checkServer()">Check Server</button>
+        <div id="serverStatus"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Arabic TTS Test</h2>
+        <div class="arabic-text">مَرْحَبًا، كَيْفَ حَالُكَ الْيَوْمَ؟</div>
+        <button onclick="testArabicTTS()">Test Arabic Pronunciation</button>
+        <div id="arabicStatus"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>English TTS Test</h2>
+        <p>Hello, how are you today?</p>
+        <button onclick="testEnglishTTS()">Test English Pronunciation</button>
+        <div id="englishStatus"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Supported Languages</h2>
+        <button onclick="getLanguages()">Get Supported Languages</button>
+        <div id="languagesStatus"></div>
+    </div>
+
+    <script>
+        const BASE_URL = 'http://localhost:5000';
+
+        async function checkServer() {
+            try {
+                const response = await fetch(`${BASE_URL}/api/health`);
+                const data = await response.json();
+                document.getElementById('serverStatus').innerHTML = 
+                    `<div class="status success">✅ Server is running: ${data.message}</div>`;
+            } catch (error) {
+                document.getElementById('serverStatus').innerHTML = 
+                    `<div class="status error">❌ Server error: ${error.message}</div>`;
+            }
+        }
+
+        async function testArabicTTS() {
+            try {
+                const response = await fetch(`${BASE_URL}/api/tts/generate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        text: 'مَرْحَبًا، كَيْفَ حَالُكَ الْيَوْمَ؟',
+                        language: 'arabic',
+                        options: {
+                            rate: 0.8,
+                            pitch: 1.0,
+                            volume: 1.0
+                        }
+                    })
+                });
+
+                if (response.ok) {
+                    const audioBlob = await response.blob();
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    const audio = new Audio(audioUrl);
+                    audio.play();
+                    
+                    document.getElementById('arabicStatus').innerHTML = 
+                        `<div class="status success">✅ Arabic TTS generated and playing!</div>`;
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                document.getElementById('arabicStatus').innerHTML = 
+                    `<div class="status error">❌ Arabic TTS error: ${error.message}</div>`;
+            }
+        }
+
+        async function testEnglishTTS() {
+            try {
+                const response = await fetch(`${BASE_URL}/api/tts/generate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        text: 'Hello, how are you today?',
+                        language: 'english',
+                        options: {
+                            rate: 1.0,
+                            pitch: 1.0,
+                            volume: 1.0
+                        }
+                    })
+                });
+
+                if (response.ok) {
+                    const audioBlob = await response.blob();
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    const audio = new Audio(audioUrl);
+                    audio.play();
+                    
+                    document.getElementById('englishStatus').innerHTML = 
+                        `<div class="status success">✅ English TTS generated and playing!</div>`;
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                document.getElementById('englishStatus').innerHTML = 
+                    `<div class="status error">❌ English TTS error: ${error.message}</div>`;
+            }
+        }
+
+        async function getLanguages() {
+            try {
+                const response = await fetch(`${BASE_URL}/api/tts/languages`);
+                const data = await response.json();
+                document.getElementById('languagesStatus').innerHTML = 
+                    `<div class="status success">✅ Supported languages: ${JSON.stringify(data.languages, null, 2)}</div>`;
+            } catch (error) {
+                document.getElementById('languagesStatus').innerHTML = 
+                    `<div class="status error">❌ Languages error: ${error.message}</div>`;
+            }
+        }
+
+        // Auto-check server on load
+        window.onload = function() {
+            checkServer();
+        };
+    </script>
+</body>
+</html>

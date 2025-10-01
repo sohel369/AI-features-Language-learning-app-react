@@ -157,6 +157,71 @@ class DemoAuthService {
 		this._emit(this.getCurrentUser(), current);
 		return { success: true };
 	}
+
+	async updateProfile(profileData) {
+		const uid = this._getCurrentUserId();
+		if (!uid) throw new Error('Not authenticated');
+		const users = this._readUsers();
+		const current = users[uid] || {};
+		// Update profile fields
+		Object.keys(profileData).forEach(key => {
+			if (profileData[key] !== undefined) {
+				current[key] = profileData[key];
+			}
+		});
+		users[uid] = current;
+		this._writeUsers(users);
+		this._emit(this.getCurrentUser(), current);
+		return { success: true };
+	}
+
+	// Settings management methods
+	async updateUserSettings(settings) {
+		const uid = this._getCurrentUserId();
+		if (!uid) throw new Error('No user logged in');
+
+		const users = this._readUsers();
+		if (users[uid]) {
+			users[uid].settings = {
+				...users[uid].settings,
+				...settings,
+				lastUpdated: new Date().toISOString()
+			};
+			this._writeUsers(users);
+			this._emit(this.getCurrentUser(), this._getCurrentUserData());
+		}
+	}
+
+	async getUserSettings() {
+		const uid = this._getCurrentUserId();
+		if (!uid) return null;
+
+		const users = this._readUsers();
+		return users[uid]?.settings || {
+			theme: 'system',
+			fontSize: 'medium',
+			notifications: true,
+			soundEffects: true
+		};
+	}
+
+	// Initialize user settings if they don't exist
+	async initializeUserSettings() {
+		const uid = this._getCurrentUserId();
+		if (!uid) return;
+
+		const users = this._readUsers();
+		if (users[uid] && !users[uid].settings) {
+			users[uid].settings = {
+				theme: 'system',
+				fontSize: 'medium',
+				notifications: true,
+				soundEffects: true,
+				lastUpdated: new Date().toISOString()
+			};
+			this._writeUsers(users);
+		}
+	}
 }
 
 const authService = new DemoAuthService();

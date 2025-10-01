@@ -1,6 +1,7 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Volume2, Check, X, Play, Pause, RotateCcw, Star, Clock, Target } from 'lucide-react';
 import speakText from '../TextToSpeech';
+import EnhancedConfetti from './EnhancedConfetti';
 
 // Enhanced quiz question types
 const QUESTION_TYPES = {
@@ -273,11 +274,34 @@ const EnhancedQuiz = ({ selectedLanguage = "english", onFinish, onQuestionComple
   const [matchedPairs, setMatchedPairs] = useState([]);
   const [selectedLeftItem, setSelectedLeftItem] = useState(null);
   const [startTime, setStartTime] = useState(Date.now());
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [autoAdvanceTimeout, setAutoAdvanceTimeout] = useState(null);
+  const confettiTimeoutRef = useRef(null);
 
   // Get questions for selected language
   const questions = ENHANCED_QUIZ_QUESTIONS[selectedLanguage] || ENHANCED_QUIZ_QUESTIONS.english;
   const currentQuestionObj = questions[currentQuestion];
   const isQuestionArabic = /[\u0600-\u06FF]/.test(currentQuestionObj?.question || '');
+
+  // Function to advance to next question
+  const advanceToNextQuestion = useCallback(() => {
+    if (currentQuestion < questions.length - 1) {
+      setCurrentQuestion(prev => prev + 1);
+      setSelectedAnswer(null);
+      setUserAnswer("");
+      setShowResult(false);
+      setIsCorrect(false);
+      setMatchedPairs([]);
+      setSelectedLeftItem(null);
+    } else {
+      // Quiz finished
+      const finalScore = quizScore;
+      const totalQuestions = questions.length;
+      if (onFinish) {
+        onFinish(finalScore, totalQuestions, timeSpent);
+      }
+    }
+  }, [currentQuestion, questions.length, quizScore, timeSpent, onFinish]);
 
   // Timer effect
   useEffect(() => {
@@ -287,6 +311,15 @@ const EnhancedQuiz = ({ selectedLanguage = "english", onFinish, onQuestionComple
 
     return () => clearInterval(timer);
   }, [startTime]);
+
+  // Cleanup timeout on unmount or question change
+  useEffect(() => {
+    return () => {
+      if (autoAdvanceTimeout) {
+        clearTimeout(autoAdvanceTimeout);
+      }
+    };
+  }, [autoAdvanceTimeout]);
 
   // Initialize drag and drop items
   useEffect(() => {
@@ -314,6 +347,22 @@ const EnhancedQuiz = ({ selectedLanguage = "english", onFinish, onQuestionComple
     setIsCorrect(correct);
     if (correct) {
       setQuizScore(prev => prev + 1);
+      // Clear any existing confetti timeout
+      if (confettiTimeoutRef.current) {
+        clearTimeout(confettiTimeoutRef.current);
+      }
+      // Trigger confetti animation for correct answers
+      setShowConfetti(true);
+      // Stop confetti after 3 seconds
+      confettiTimeoutRef.current = setTimeout(() => {
+        setShowConfetti(false);
+        confettiTimeoutRef.current = null;
+      }, 3000);
+      // Auto-advance to next question after 3 seconds
+      const timeout = setTimeout(() => {
+        advanceToNextQuestion();
+      }, 3000);
+      setAutoAdvanceTimeout(timeout);
     }
 
     // Speak the selected answer
@@ -336,6 +385,22 @@ const EnhancedQuiz = ({ selectedLanguage = "english", onFinish, onQuestionComple
     setIsCorrect(correct);
     if (correct) {
       setQuizScore(prev => prev + 1);
+      // Clear any existing confetti timeout
+      if (confettiTimeoutRef.current) {
+        clearTimeout(confettiTimeoutRef.current);
+      }
+      // Trigger confetti animation for correct answers
+      setShowConfetti(true);
+      // Stop confetti after 3 seconds
+      confettiTimeoutRef.current = setTimeout(() => {
+        setShowConfetti(false);
+        confettiTimeoutRef.current = null;
+      }, 3000);
+      // Auto-advance to next question after 3 seconds
+      const timeout = setTimeout(() => {
+        advanceToNextQuestion();
+      }, 3000);
+      setAutoAdvanceTimeout(timeout);
     }
 
     // Speak user's answer
@@ -403,6 +468,12 @@ const EnhancedQuiz = ({ selectedLanguage = "english", onFinish, onQuestionComple
     setMatchedPairs([]);
     setSelectedLeftItem(null);
     setStartTime(Date.now());
+    setShowConfetti(false);
+    // Clear any pending confetti timeout
+    if (confettiTimeoutRef.current) {
+      clearTimeout(confettiTimeoutRef.current);
+      confettiTimeoutRef.current = null;
+    }
 
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(prev => prev + 1);
@@ -425,6 +496,12 @@ const EnhancedQuiz = ({ selectedLanguage = "english", onFinish, onQuestionComple
     setStartTime(Date.now());
     setMatchedPairs([]);
     setSelectedLeftItem(null);
+    setShowConfetti(false);
+    // Clear any pending confetti timeout
+    if (confettiTimeoutRef.current) {
+      clearTimeout(confettiTimeoutRef.current);
+      confettiTimeoutRef.current = null;
+    }
   };
 
   if (!currentQuestionObj) return <div>Loading quiz...</div>;
@@ -437,6 +514,11 @@ const EnhancedQuiz = ({ selectedLanguage = "english", onFinish, onQuestionComple
 
   return (
     <div className="space-y-6 p-4">
+      {/* Confetti Animation */}
+      <EnhancedConfetti 
+        show={showConfetti} 
+        onComplete={() => setShowConfetti(false)} 
+      />
       {/* Quiz Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-white text-2xl font-bold">

@@ -1,1 +1,19 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Language Learning MVP - 2</title><script defer="defer" src="/static/js/main.d07fe30b.js"></script><link href="/static/css/main.ee352a2c.css" rel="stylesheet"></head><body><div id="root"></div></body><script>const[selectedLanguage,setSelectedLanguage]=useState(()=>{const e=localStorage.getItem("selectedLanguage");return e&&LANGUAGES[e]?e:"english"});useEffect(()=>{localStorage.setItem("selectedLanguage",selectedLanguage)},[selectedLanguage]),useEffect(()=>{(()=>{const e=Object.keys(TRANSLATIONS.english),t=Object.keys(TRANSLATIONS.arabic),a=e.filter(e=>!t.includes(e));a.length&&console.warn("Missing Arabic translations:",a)})()},[])</script></html>
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Language Learning MVP - 2</title>
+    <script defer="defer" src="/static/js/main.d07fe30b.js"></script>
+    <link href="/static/css/main.ee352a2c.css" rel="stylesheet">
+    <link rel="shortcut icon" href="https://cdn.shopify.com/app-store/listing_images/cc15d11b52f9f1237532c3d97425f4d1/icon/COWYl-Ha0Y0DEAE=.png">
+
+</head>
+
+<body>
+    <div id="root"></div>
+</body>
+<script>const [selectedLanguage, setSelectedLanguage] = useState(() => { const e = localStorage.getItem("selectedLanguage"); return e && LANGUAGES[e] ? e : "english" }); useEffect(() => { localStorage.setItem("selectedLanguage", selectedLanguage) }, [selectedLanguage]), useEffect(() => { (() => { const e = Object.keys(TRANSLATIONS.english), t = Object.keys(TRANSLATIONS.arabic), a = e.filter(e => !t.includes(e)); a.length && console.warn("Missing Arabic translations:", a) })() }, [])</script>
+
+</html>

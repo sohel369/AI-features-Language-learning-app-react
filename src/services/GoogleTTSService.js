@@ -17,7 +17,12 @@ class GoogleTTSService {
       await this.loadVoices();
       this.isInitialized = true;
     } catch (error) {
-      console.warn('Google TTS not available, falling back to Web Speech API:', error);
+      // Silently handle missing API key - this is expected in demo mode
+      if (error.message.includes('API key not configured')) {
+        console.log('Google TTS API key not configured - using Web Speech API fallback');
+      } else {
+        console.warn('Google TTS not available, falling back to Web Speech API:', error);
+      }
       this.isInitialized = false;
     }
   }
@@ -97,6 +102,13 @@ class GoogleTTSService {
       'شكرا': 'شُكْرًا', 'عفوا': 'عَفْوًا', 'نعم': 'نَعَمْ', 'لا': 'لَا',
       'أهلا': 'أَهْلًا', 'وسهلا': 'وَسَهْلًا', 'كيف': 'كَيْفَ', 'حال': 'حَالُ',
       'أنت': 'أَنْتَ', 'أنا': 'أَنَا', 'هو': 'هُوَ', 'هي': 'هِيَ',
+      
+      // AI Coach specific phrases with full diacritics
+      'مرحبا كيف حالك اليوم': 'مَرْحَبًا، كَيْفَ حَالُكَ الْيَوْمَ؟',
+      'كيف حالك اليوم': 'كَيْفَ حَالُكَ الْيَوْمَ؟',
+      'مرحبا': 'مَرْحَبًا',
+      'كيف حالك': 'كَيْفَ حَالُكَ',
+      'اليوم': 'الْيَوْمَ',
       
       // Additional common phrases with proper diacritics
       'صباح': 'صَبَاحُ', 'مساء': 'مَسَاءُ', 'الخير': 'الْخَيْرُ',

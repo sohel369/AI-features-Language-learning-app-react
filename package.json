@@ -5,6 +5,7 @@
   "dependencies": {
     "firebase": "^10.14.1",
     "lucide-react": "^0.264.0",
+    "node-fetch": "^3.3.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^7.9.1",

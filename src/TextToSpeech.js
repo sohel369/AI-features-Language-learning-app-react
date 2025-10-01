@@ -1,5 +1,6 @@
-// Enhanced Text-to-Speech with Google TTS and Arabic vowel support
+// Enhanced Text-to-Speech with Backend TTS and Arabic vowel support
 import googleTTSService from './services/GoogleTTSService';
+import backendTTSService from './services/BackendTTSService';
 
 // Language mapping for better voice selection
 const LANGUAGE_MAP = {
@@ -14,10 +15,15 @@ const LANGUAGE_MAP = {
   khmer: 'km-KH'
 };
 
-// Enhanced speakText function with Google TTS support
+// Enhanced speakText function with Backend TTS support
 const speakText = async (text, language = "english", options = {}) => {
   try {
-    // Use Google TTS service if available
+    // Use Backend TTS service first (free, no API key required)
+    if (backendTTSService.isServiceAvailable()) {
+      return await backendTTSService.speak(text, language, options);
+    }
+    
+    // Try Google TTS service if available
     if (googleTTSService.isAvailable()) {
       return await googleTTSService.speak(text, language, options);
     }
@@ -30,10 +36,10 @@ const speakText = async (text, language = "english", options = {}) => {
   }
 };
 
-// Simple Arabic helpers for diacritics when using Web Speech fallback
+// Enhanced Arabic helpers for diacritics when using Web Speech fallback
 const hasArabicDiacritics = (input) => /[\u064B-\u0652\u0670\u0640]/.test(input);
 const applyBasicArabicDiacritics = (input) => {
-  // Common phrase replacements to improve pronunciation
+  // Enhanced phrase replacements to improve pronunciation
   const common = {
     'السلام عليكم': 'السَّلَامُ عَلَيْكُمْ',
     'ورحمة الله وبركاته': 'وَرَحْمَةُ اللَّهِ وَبَرَكَاتُهُ',
@@ -45,7 +51,12 @@ const applyBasicArabicDiacritics = (input) => {
     'لا': 'لَا',
     'كيف حالك': 'كَيْفَ حَالُكَ',
     'أنا بخير': 'أَنَا بِخَيْرٍ',
-    'مع السلامة': 'مَعَ السَّلَامَةِ'
+    'مع السلامة': 'مَعَ السَّلَامَةِ',
+    // AI Coach specific phrases
+    'مرحبا كيف حالك اليوم': 'مَرْحَبًا، كَيْفَ حَالُكَ الْيَوْمَ؟',
+    'كيف حالك اليوم': 'كَيْفَ حَالُكَ الْيَوْمَ؟',
+    'اليوم': 'الْيَوْمَ',
+    'كيف حالك اليوم': 'كَيْفَ حَالُكَ الْيَوْمَ؟'
   };
   let out = input;
   Object.keys(common).forEach(key => { out = out.replace(new RegExp(key, 'g'), common[key]); });
@@ -97,12 +108,21 @@ const fallbackToWebSpeech = (text, language, options = {}) => {
     // Prefer exact lang match, then any Arabic voice if Arabic requested
     let preferredVoice = voices.find(v => v.lang === languageCode && (v.name.includes('Google') || v.name.includes('Neural') || v.name.includes('Wavenet') || v.name.includes('Standard')));
     if (!preferredVoice && languageCode === 'ar-SA') {
-      preferredVoice = voices.find(v => v.lang?.toLowerCase().startsWith('ar')) || null;
+      // Try to find the best Arabic voice available
+      preferredVoice = voices.find(v => v.lang?.toLowerCase().startsWith('ar') && (v.name.includes('Google') || v.name.includes('Neural'))) ||
+                      voices.find(v => v.lang?.toLowerCase().startsWith('ar')) || null;
     }
     if (!preferredVoice) {
       preferredVoice = voices.find(v => v.lang === languageCode) || null;
     }
     if (preferredVoice) utterance.voice = preferredVoice;
+    
+    // Enhanced settings for Arabic pronunciation
+    if (languageCode === 'ar-SA') {
+      utterance.rate = 0.8; // Slower for better Arabic pronunciation
+      utterance.pitch = 1.0;
+    }
+    
     speechSynthesis.speak(utterance);
   }).catch(() => {
     speechSynthesis.speak(utterance);
@@ -110,7 +130,8 @@ const fallbackToWebSpeech = (text, language, options = {}) => {
   return utterance;
 };
 
-// Initialize Google TTS service
+// Initialize TTS services
 googleTTSService.initialize();
+backendTTSService.checkAvailability();
 
 export default speakText;

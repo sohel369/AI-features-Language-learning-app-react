@@ -11,7 +11,12 @@ export const UserProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [userProgress, setUserProgress] = useState({ level: 1, progressPercentage: 0 });
   const [fontSize, setFontSize] = useState("text-base");
-  const [currentLanguage, setCurrentLanguage] = useState({ rtl: false });
+  const [currentLanguage, setCurrentLanguage] = useState({ 
+    name: 'English', 
+    flag: '🇺🇸', 
+    rtl: false,
+    code: 'english'
+  });
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -28,6 +33,15 @@ export const UserProvider = ({ children }) => {
     return () => unsubscribe();
   }, []);
 
+  // Safe access to currentLanguage properties
+  const safeCurrentLanguage = {
+    ...currentLanguage,
+    rtl: currentLanguage?.rtl || false,
+    name: currentLanguage?.name || 'English',
+    flag: currentLanguage?.flag || '🇺🇸',
+    code: currentLanguage?.code || 'english'
+  };
+
   return (
     <UserContext.Provider
       value={{
@@ -38,7 +52,7 @@ export const UserProvider = ({ children }) => {
         setUserProgress,
         fontSize,
         setFontSize,
-        currentLanguage,
+        currentLanguage: safeCurrentLanguage,
         setCurrentLanguage,
       }}
     >

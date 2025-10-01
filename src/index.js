@@ -3,6 +3,11 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { BrowserRouter } from 'react-router-dom';
 import './index.css';
+import './global-settings.css';
+import { initializeSettings } from './utils/settingsInit';
+
+// Initialize settings on app start
+initializeSettings();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
