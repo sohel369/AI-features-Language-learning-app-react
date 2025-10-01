@@ -1104,6 +1104,17 @@ const LanguageLearningMVP = () => {
 
   const LessonsScreen = () => {
     const [activeTab, setActiveTab] = useState(learningLanguages[0] || 'english');
+    const [lessonLanguage, setLessonLanguage] = useState(() => {
+      // Load from localStorage or default to english
+      const saved = localStorage.getItem('lessonLanguage');
+      return saved || 'english';
+    });
+
+    // Save lesson language preference
+    const handleLessonLanguageChange = (language) => {
+      setLessonLanguage(language);
+      localStorage.setItem('lessonLanguage', language);
+    };
 
     // Get vocabulary for the active learning language
     const vocab = VOCABULARY.beginner[activeTab] || VOCABULARY.beginner.english;
@@ -1115,6 +1126,51 @@ const LanguageLearningMVP = () => {
             {t('lessons')}
           </h1>
           <div className="text-blue-400 font-medium">{t('level')} {userProgress.level}</div>
+        </div>
+
+        {/* Language Toggle for Easy Learning */}
+        <div className="bg-slate-800/70 backdrop-blur-lg rounded-2xl p-6 shadow-xl border border-slate-700/50">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <Globe className="text-blue-400" size={24} />
+              <div>
+                <h3 className="font-bold text-white text-lg">Learning Language</h3>
+                <p className="text-sm text-slate-400">Switch between English and Arabic for easier learning</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex gap-3">
+            <button
+              onClick={() => handleLessonLanguageChange('english')}
+              className={`flex-1 p-4 rounded-xl border-2 transition-all duration-300 ${
+                lessonLanguage === 'english'
+                  ? 'border-blue-500 bg-gradient-to-br from-blue-500/20 to-purple-500/20 shadow-lg shadow-blue-500/20'
+                  : 'border-slate-600 bg-slate-700/30 hover:border-slate-500 hover:bg-slate-700/50'
+              }`}
+            >
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-2xl">🇺🇸</span>
+                <span className="font-semibold text-white">English</span>
+                <span className="text-xs text-slate-400">Learn in English</span>
+              </div>
+            </button>
+            
+            <button
+              onClick={() => handleLessonLanguageChange('arabic')}
+              className={`flex-1 p-4 rounded-xl border-2 transition-all duration-300 ${
+                lessonLanguage === 'arabic'
+                  ? 'border-green-500 bg-gradient-to-br from-green-500/20 to-emerald-500/20 shadow-lg shadow-green-500/20'
+                  : 'border-slate-600 bg-slate-700/30 hover:border-slate-500 hover:bg-slate-700/50'
+              }`}
+            >
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-2xl">🇸🇦</span>
+                <span className="font-semibold text-white">العربية</span>
+                <span className="text-xs text-slate-400">تعلم بالعربية</span>
+              </div>
+            </button>
+          </div>
         </div>
 
         {/* Language Tabs - Only show if user is learning multiple languages */}
@@ -1155,38 +1211,66 @@ const LanguageLearningMVP = () => {
         {['Beginner', 'Intermediate', 'Advanced'].map((level) => {
           const levelKey = level.toLowerCase() + 'Level';
           const levelVocab = VOCABULARY[level.toLowerCase()][activeTab] || VOCABULARY[level.toLowerCase()].english;
+          
+          // Get lesson content based on selected lesson language
+          const getLessonContent = (item) => {
+            if (lessonLanguage === 'arabic') {
+              return {
+                primary: item.translation, // Show Arabic translation as primary
+                secondary: item.word,     // Show English word as secondary
+                isRTL: true
+              };
+            } else {
+              return {
+                primary: item.word,       // Show English word as primary
+                secondary: item.translation, // Show Arabic translation as secondary
+                isRTL: false
+              };
+            }
+          };
+          
           return (
             <div key={level} className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-4">
               <div className="flex items-center justify-between mb-3">
-                <h3 className={`font-bold text-white ${fontSize}`}>{t(levelKey)}</h3>
+                <h3 className={`font-bold text-white ${fontSize}`}>
+                  {lessonLanguage === 'arabic' ? 
+                    (level === 'Beginner' ? 'مبتدئ' : level === 'Intermediate' ? 'متوسط' : 'متقدم') :
+                    t(levelKey)
+                  }
+                </h3>
                 <span className="text-xs text-slate-400">{levelVocab?.length || 0} words</span>
               </div>
 
               <div className="space-y-2">
-                {levelVocab?.slice(0, 3).map((item, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg hover:bg-slate-700 transition-colors cursor-pointer"
-                    onClick={() => speakText(item.word, activeTab)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyPress={(e) => e.key === 'Enter' && speakText(item.word, activeTab)}
-                  >
-                    <div>
-                      <div className={`font-medium text-white ${fontSize}`}>{item.word}</div>
-                      <div className={`text-sm text-slate-400 ${currentLanguage?.rtl ? 'text-right' : 'text-left'}`}>
-                        {item.translation}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => speakText(item.word, activeTab)}
-                      className="text-blue-400 hover:text-blue-300"
-                      aria-label={`Play pronunciation for ${item.word}`}
+                {levelVocab?.slice(0, 3).map((item, index) => {
+                  const content = getLessonContent(item);
+                  return (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg hover:bg-slate-700 transition-colors cursor-pointer"
+                      onClick={() => speakText(content.primary, lessonLanguage)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyPress={(e) => e.key === 'Enter' && speakText(content.primary, lessonLanguage)}
                     >
-                      <Volume2 size={16} />
-                    </button>
-                  </div>
-                ))}
+                      <div className={`flex-1 ${content.isRTL ? 'text-right' : 'text-left'}`}>
+                        <div className={`font-medium text-white ${fontSize} ${content.isRTL ? 'text-right' : 'text-left'}`}>
+                          {content.primary}
+                        </div>
+                        <div className={`text-sm text-slate-400 ${content.isRTL ? 'text-right' : 'text-left'}`}>
+                          {content.secondary}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => speakText(content.primary, lessonLanguage)}
+                        className="text-blue-400 hover:text-blue-300 ml-3"
+                        aria-label={`Play pronunciation for ${content.primary}`}
+                      >
+                        <Volume2 size={16} />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           );
@@ -1538,12 +1622,11 @@ const LanguageLearningMVP = () => {
 
 
   const AICoachScreen = ({ t, selectedLanguage, speakText, fontSize }) => {
+    const [learningLanguage, setLearningLanguage] = useState(null); // null = not selected yet
     const [pronunciationScore, setPronunciationScore] = useState(null);
     const [isRecording, setIsRecording] = useState(false);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const [chatMessages, setChatMessages] = useState([
-      { type: 'ai', message: 'Hello! I\'m your AI language coach. How can I help you today?' }
-    ]);
+    const [chatMessages, setChatMessages] = useState([]);
     const [inputMessage, setInputMessage] = useState('');
     const [expectedText, setExpectedText] = useState('Hello, how are you?');
     const [liveTranscript, setLiveTranscript] = useState('');
@@ -1552,6 +1635,22 @@ const LanguageLearningMVP = () => {
     const [detectedLanguage, setDetectedLanguage] = useState('english');
     const recognitionRef = useRef(null);
     const isRecordingRef = useRef(false);
+
+    // Initialize chat when language is selected
+    const initializeChat = (language) => {
+      setLearningLanguage(language);
+      const welcomeMessages = {
+        english: [
+          { type: 'ai', message: 'Hello! I\'m your AI language coach. I\'ll help you learn English. What would you like to practice today?' },
+          { type: 'ai', message: 'I can help you with:\n• Grammar and vocabulary\n• Pronunciation practice\n• Conversation practice\n• Writing exercises\n\nJust type your message or use voice input!' }
+        ],
+        arabic: [
+          { type: 'ai', message: 'مرحباً! أنا مدربك الذكي للغة. سأساعدك في تعلم العربية. ماذا تريد أن تتدرب عليه اليوم؟' },
+          { type: 'ai', message: 'يمكنني مساعدتك في:\n• القواعد والمفردات\n• ممارسة النطق\n• ممارسة المحادثة\n• تمارين الكتابة\n\nاكتب رسالتك أو استخدم الإدخال الصوتي!' }
+        ]
+      };
+      setChatMessages(welcomeMessages[language] || welcomeMessages.english);
+    };
 
     // Auto language detection function
     const detectLanguage = (text) => {
@@ -1937,11 +2036,74 @@ const LanguageLearningMVP = () => {
     // Determine RTL based on selected language key
     const rtlLanguages = new Set(['arabic', 'hebrew', 'urdu', 'farsi']);
     const isRTL = rtlLanguages.has(String(selectedLanguage).toLowerCase());
+    // Show language selection if not selected yet
+    if (learningLanguage === null) {
+      return (
+        <div className={`space-y-6 ${isRTL ? 'rtl' : 'ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+          <div className="flex items-center justify-between">
+            <h1 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-lg' ? 'text-2xl' : 'text-3xl'}`}>
+              {t('aiLanguageCoach')}
+            </h1>
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <span className="text-green-400 text-sm">Online</span>
+            </div>
+          </div>
+
+          {/* Language Selection */}
+          <div className="bg-slate-800/70 backdrop-blur-lg rounded-3xl p-8 shadow-xl border border-slate-700/50">
+            <div className="text-center mb-8">
+              <h2 className={`font-bold text-white mb-4 ${fontSize === 'text-sm' ? 'text-2xl' : fontSize === 'text-lg' ? 'text-3xl' : 'text-4xl'}`}>
+                Choose Your Learning Language
+              </h2>
+              <p className="text-slate-400 text-lg">
+                What language would you like to learn with your AI coach?
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+              <button
+                onClick={() => initializeChat('english')}
+                className="p-8 rounded-2xl border-2 border-blue-500 bg-gradient-to-br from-blue-500/20 to-purple-500/20 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all duration-300 group"
+              >
+                <div className="text-center">
+                  <div className="text-6xl mb-4">🇺🇸</div>
+                  <h3 className="text-2xl font-bold text-white mb-2">English</h3>
+                  <p className="text-slate-300 mb-4">Learn English with AI assistance</p>
+                  <div className="text-sm text-slate-400">
+                    • Grammar & Vocabulary<br/>
+                    • Pronunciation Practice<br/>
+                    • Conversation Practice
+                  </div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => initializeChat('arabic')}
+                className="p-8 rounded-2xl border-2 border-green-500 bg-gradient-to-br from-green-500/20 to-emerald-500/20 shadow-lg shadow-green-500/20 hover:shadow-green-500/30 transition-all duration-300 group"
+              >
+                <div className="text-center">
+                  <div className="text-6xl mb-4">🇸🇦</div>
+                  <h3 className="text-2xl font-bold text-white mb-2">العربية</h3>
+                  <p className="text-slate-300 mb-4">تعلم العربية بمساعدة الذكاء الاصطناعي</p>
+                  <div className="text-sm text-slate-400">
+                    • القواعد والمفردات<br/>
+                    • ممارسة النطق<br/>
+                    • ممارسة المحادثة
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className={`space-y-6 ${isRTL ? 'rtl' : 'ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
         <div className="flex items-center justify-between">
           <h1 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-lg' ? 'text-2xl' : 'text-3xl'}`}>
-            {t('aiLanguageCoach')}
+            {t('aiLanguageCoach')} - {learningLanguage === 'arabic' ? 'العربية' : 'English'}
           </h1>
           <div className="flex items-center space-x-2">
             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
@@ -2109,13 +2271,13 @@ const LanguageLearningMVP = () => {
   };
 
   const LEARNING_LANGUAGES = {
-    es: { name: 'Arabic', flag: 'Ar' },
-    fr: { name: 'Bahasa Indonesia', flag: 'Bahasa' },
-    de: { name: 'Dutch', flag: 'Dutch' },
-    it: { name: 'Malay', flag: 'Malay' },
-    pt: { name: 'Thai', flag: 'Thai' },
-    ja: { name: 'Khmer', flag: 'Khmer' },
-    ko: { name: 'English', flag: 'En' },
+    es: { name: 'Arabic', flag: 'sa' },
+    fr: { name: 'Bahasa Indonesia', flag: 'id' },
+    de: { name: 'Dutch', flag: 'nl' },
+    it: { name: 'Malay', flag: 'ms' },
+    pt: { name: 'Thai', flag: 'th' },
+    ja: { name: 'Khmer', flag: 'km' },
+    ko: { name: 'English', flag: 'en' },
   };
 
   const ACHIEVEMENTS = [
@@ -2510,7 +2672,7 @@ const LanguageLearningMVP = () => {
             </div>
             {isLoadingLeaderboard ? (
               <div className="text-center py-12">
-                <div className="w-12 h-12 border-4 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                <div className="w-12 h-12 border-4 p-4 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
                 <p className="text-slate-400 text-lg">Loading leaderboard...</p>
               </div>
             ) : leaderboard.length > 0 ? (
@@ -2518,14 +2680,14 @@ const LanguageLearningMVP = () => {
                 {leaderboard.map((user, index) => (
                   <div
                     key={user.id}
-                    className={`flex items-center gap-5 p-6 rounded-2xl transition-all ${
+                    className={`flex items-center p-4 gap-5 p-6 rounded-2xl transition-all ${
                       user.displayName === 'You'
                         ? 'bg-gradient-to-r from-blue-600/30 to-purple-600/30 border-2 border-blue-500/50 shadow-lg shadow-blue-500/20'
                         : 'bg-slate-700/40 hover:bg-slate-700/60'
                     }`}
                   >
                     <div
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg ${
+                      className={`w-12 h-12 rounded-xl p-4 flex items-center justify-center text-white font-bold text-lg shadow-lg ${
                         index === 0
                           ? 'bg-gradient-to-br from-yellow-400 to-orange-500'
                           : index === 1
@@ -2538,11 +2700,11 @@ const LanguageLearningMVP = () => {
                       {index + 1}
                     </div>
                     <div className="flex-1">
-                      <div className="font-semibold text-white text-lg">{user.displayName || 'Anonymous'}</div>
+                      <div className="font-semibold p-4 text-white text-lg">{user.displayName || 'Anonymous'}</div>
                       <div className="text-slate-400">Level {user.level || 1}</div>
                     </div>
                     <div className="text-right">
-                      <div className="text-yellow-400 font-bold text-xl">{user.xp || 0}</div>
+                      <div className="text-yellow-400 p-4 font-bold text-xl">{user.xp || 0}</div>
                       <div className="text-slate-400 text-sm">XP</div>
                     </div>
                     {index < 3 && (
