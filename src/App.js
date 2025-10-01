@@ -1694,6 +1694,7 @@ const LanguageLearningMVP = () => {
     const [pronunciationFeedback, setPronunciationFeedback] = useState('');
     const [detectedLanguage, setDetectedLanguage] = useState('english');
     const recognitionRef = useRef(null);
+    const isRecordingRef = useRef(false);
 
     // Auto language detection function
     const detectLanguage = (text) => {
@@ -1963,9 +1964,11 @@ const LanguageLearningMVP = () => {
     }, [chatMessages, selectedLanguage, speakText]);
 
     const startRecording = useCallback(() => {
-      // Prevent multiple starts
-      if (isRecording) return;
+      // Prevent multiple starts using ref for immediate check
+      if (isRecordingRef.current) return;
       
+      // Set ref immediately to prevent race conditions
+      isRecordingRef.current = true;
       setIsRecording(true);
       setIsAnalyzing(true);
       setPronunciationScore(null);
@@ -1979,12 +1982,14 @@ const LanguageLearningMVP = () => {
           recognitionRef.current.start();
         } catch (error) {
           console.log('SpeechRecognition already started or not available');
+          isRecordingRef.current = false;
           setIsRecording(false);
           setIsAnalyzing(false);
         }
       } else {
         // Fallback simulation
         setTimeout(() => {
+          isRecordingRef.current = false;
           setIsRecording(false);
           setIsAnalyzing(true);
           setLiveTranscript(expectedText);
@@ -1998,7 +2003,7 @@ const LanguageLearningMVP = () => {
           }, 2000);
         }, 3000);
       }
-    }, [expectedText, isRecording]);
+    }, [expectedText]);
 
     const stopRecording = useCallback(() => {
       if (recognitionRef.current) {
@@ -2008,6 +2013,8 @@ const LanguageLearningMVP = () => {
           console.log('SpeechRecognition stop failed:', error);
         }
       }
+      // Reset ref immediately
+      isRecordingRef.current = false;
       setIsRecording(false);
       setIsAnalyzing(false);
     }, []);
@@ -2064,6 +2071,20 @@ const LanguageLearningMVP = () => {
       ]);
       setInputMessage('');
     }, [inputMessage, selectedLanguage]);
+
+    // Cleanup effect to reset recording state
+    useEffect(() => {
+      return () => {
+        isRecordingRef.current = false;
+        if (recognitionRef.current) {
+          try {
+            recognitionRef.current.stop();
+          } catch (error) {
+            // Ignore errors during cleanup
+          }
+        }
+      };
+    }, []);
 
     // Determine RTL based on selected language key
     const rtlLanguages = new Set(['arabic', 'hebrew', 'urdu', 'farsi']);
