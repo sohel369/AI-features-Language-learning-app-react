@@ -41,7 +41,8 @@ import {
   Monitor,
   Save,
   TrendingUp,
-  Flame   // use Flame instead of Fire
+  Flame,   // use Flame instead of Fire
+  LogOut
 } from 'lucide-react';
 
 // Move static data outside component to prevent recreation on renders
@@ -50,6 +51,51 @@ const LEARNING_LANGUAGES = {
   arabic: { name: 'العربية', flag: '🇸🇦', rtl: true }
 };
 
+// Global Language Toggle Component - Redesigned
+const GlobalLanguageToggle = ({ globalLanguage, onLanguageChange, className = "", compact = false }) => (
+  <div className={`bg-slate-800/80 backdrop-blur-lg rounded-2xl shadow-xl border border-slate-700/60 ${compact ? 'p-2' : 'p-4'} ${className}`}>
+    {!compact && (
+      <div className="flex items-center gap-2 mb-3">
+        <Globe className="text-blue-400" size={18} />
+        <span className="font-semibold text-white text-sm">{globalLanguage === 'arabic' ? 'اللغة' : 'Language'}</span>
+      </div>
+    )}
+    
+    <div className={`flex gap-2 ${compact ? 'gap-1' : 'gap-3'}`}>
+      <button
+        onClick={() => onLanguageChange('english')}
+        className={`flex-1 ${compact ? 'p-2' : 'p-3'} rounded-xl border-2 transition-all duration-300 hover:scale-105 ${
+          globalLanguage === 'english'
+            ? 'border-blue-500 bg-gradient-to-br from-blue-500/30 to-blue-600/30 shadow-lg shadow-blue-500/30 text-white'
+            : 'border-slate-600 bg-slate-700/40 hover:border-slate-500 hover:bg-slate-700/60 text-slate-300'
+        }`}
+      >
+        <div className="flex flex-col items-center gap-1">
+          <span className={`${compact ? 'text-lg' : 'text-xl'}`}>🇺🇸</span>
+          <span className={`font-medium ${compact ? 'text-xs' : 'text-sm'} ${globalLanguage === 'english' ? 'text-white' : 'text-slate-300'}`}>
+            English
+          </span>
+        </div>
+      </button>
+      
+      <button
+        onClick={() => onLanguageChange('arabic')}
+        className={`flex-1 ${compact ? 'p-2' : 'p-3'} rounded-xl border-2 transition-all duration-300 hover:scale-105 ${
+          globalLanguage === 'arabic'
+            ? 'border-green-500 bg-gradient-to-br from-green-500/30 to-green-600/30 shadow-lg shadow-green-500/30 text-white'
+            : 'border-slate-600 bg-slate-700/40 hover:border-slate-500 hover:bg-slate-700/60 text-slate-300'
+        }`}
+      >
+        <div className="flex flex-col items-center gap-1">
+          <span className={`${compact ? 'text-lg' : 'text-xl'}`}>🇸🇦</span>
+          <span className={`font-medium ${compact ? 'text-xs' : 'text-sm'} ${globalLanguage === 'arabic' ? 'text-white' : 'text-slate-300'}`}>
+            العربية
+          </span>
+        </div>
+      </button>
+    </div>
+  </div>
+);
 
 function App() {
   return (
@@ -745,6 +791,11 @@ const LanguageLearningMVP = () => {
   // App states
   const [currentScreen, setCurrentScreen] = useState('home');
   const [selectedLanguage, setSelectedLanguage] = useState('english');
+  const [globalLanguage, setGlobalLanguage] = useState(() => {
+    // Load from localStorage or default to English
+    const saved = localStorage.getItem('globalLanguage');
+    return saved || 'english';
+  });
   const [learningLanguages, setLearningLanguages] = useState([]);
   const [userProgress, setUserProgress] = useState({
     xp: 0,
@@ -772,10 +823,32 @@ const LanguageLearningMVP = () => {
   // Get current language with RTL support
   const currentLanguage = useMemo(() => INTERFACE_LANGUAGES[selectedLanguage], [selectedLanguage]);
 
-  // Translation function
+  // Global language change handler
+  const handleGlobalLanguageChange = useCallback((newLanguage) => {
+    setGlobalLanguage(newLanguage);
+    localStorage.setItem('globalLanguage', newLanguage);
+    
+    // Apply RTL/LTR styling to document
+    const isRTL = newLanguage === 'arabic';
+    document.documentElement.setAttribute('dir', isRTL ? 'rtl' : 'ltr');
+    document.documentElement.setAttribute('lang', newLanguage);
+  }, []);
+
+  // Translation function - now uses global language
   const t = useCallback((key) => {
-    return TRANSLATIONS[selectedLanguage]?.[key] || TRANSLATIONS.english[key] || key;
-  }, [selectedLanguage]);
+    return TRANSLATIONS[globalLanguage]?.[key] || TRANSLATIONS.english[key] || key;
+  }, [globalLanguage]);
+
+  // Initialize global language on mount
+  useEffect(() => {
+    const savedLanguage = localStorage.getItem('globalLanguage');
+    if (savedLanguage) {
+      setGlobalLanguage(savedLanguage);
+      const isRTL = savedLanguage === 'arabic';
+      document.documentElement.setAttribute('dir', isRTL ? 'rtl' : 'ltr');
+      document.documentElement.setAttribute('lang', savedLanguage);
+    }
+  }, []);
 
   // Nav items
   const navItems = useMemo(() => [
@@ -803,7 +876,7 @@ const LanguageLearningMVP = () => {
         const utterance = new SpeechSynthesisUtterance(text);
 
         const langMap = {
-          arabic: 'الاصطناعي',     // you can also try 'ar-XA'
+          arabic: 'ar-SA',     // Arabic with vowels support
           dutch: 'nl-NL',
           indonesian: 'id-ID',
           malay: 'ms-MY',
@@ -812,7 +885,7 @@ const LanguageLearningMVP = () => {
           english: 'en-US'
         };
 
-        const selectedLangCode = langMap[lang] || langMap[selectedLanguage] || 'en-US';
+        const selectedLangCode = langMap[lang] || langMap[globalLanguage] || 'en-US';
         utterance.lang = selectedLangCode;
 
         // 🔑 Pick a voice that supports the selected language
@@ -820,17 +893,28 @@ const LanguageLearningMVP = () => {
         const matchedVoice = voices.find(v => v.lang === selectedLangCode);
         if (matchedVoice) {
           utterance.voice = matchedVoice;
+        } else if (globalLanguage === 'arabic') {
+          // For Arabic, try to find any Arabic voice
+          const arabicVoice = voices.find(v => v.lang.startsWith('ar-'));
+          if (arabicVoice) {
+            utterance.voice = arabicVoice;
+          }
         }
 
-        // Options
-        utterance.rate = options.rate || 0.9;
-        utterance.pitch = options.pitch || 1;
+        // Options - adjust for Arabic with vowels
+        if (globalLanguage === 'arabic') {
+          utterance.rate = options.rate || 0.8;  // Slower for Arabic with vowels
+          utterance.pitch = options.pitch || 1.1;  // Slightly higher pitch for clarity
+        } else {
+          utterance.rate = options.rate || 0.9;
+          utterance.pitch = options.pitch || 1;
+        }
 
         // Speak
         speechSynthesis.speak(utterance);
       }
     }
-  }, [selectedLanguage]);
+  }, [globalLanguage]);
 
 
   // Authentication effect
@@ -1023,13 +1107,21 @@ const LanguageLearningMVP = () => {
             </h1>
             <p className="text-blue-200">{t('readyToContinue')}</p>
           </div>
-          <button
-            onClick={() => setCurrentScreen('settings')}
-            className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors"
-            aria-label="Open settings"
-          >
-            <Settings size={20} />
-          </button>
+          <div className="flex items-center gap-3">
+            {/* <GlobalLanguageToggle 
+              className="w-40" 
+              globalLanguage={globalLanguage}
+              onLanguageChange={handleGlobalLanguageChange}
+              compact={true}
+            /> */}
+            <button
+              onClick={() => setCurrentScreen('settings')}
+              className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors"
+              aria-label="Open settings"
+            >
+              <Settings size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Progress Stats */}
@@ -1125,7 +1217,15 @@ const LanguageLearningMVP = () => {
           <h1 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-lg' ? 'text-2xl' : 'text-3xl'}`}>
             {t('lessons')}
           </h1>
-          <div className="text-blue-400 font-medium">{t('level')} {userProgress.level}</div>
+          <div className="flex items-center gap-4">
+            <GlobalLanguageToggle 
+              className="w-40" 
+              globalLanguage={globalLanguage}
+              onLanguageChange={handleGlobalLanguageChange}
+              compact={true}
+            />
+            <div className="text-blue-400 font-medium">{t('level')} {userProgress.level}</div>
+          </div>
         </div>
 
         {/* Language Toggle for Easy Learning */}
@@ -1335,6 +1435,7 @@ const LanguageLearningMVP = () => {
       },
       [currentQuestionObj, selectedLanguage, showResult]
     );
+    
 
     const handleShortAnswer = useCallback(() => {
       if (showResult || !userAnswer.trim()) return;
@@ -2044,9 +2145,12 @@ const LanguageLearningMVP = () => {
             <h1 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-lg' ? 'text-2xl' : 'text-3xl'}`}>
               {t('aiLanguageCoach')}
             </h1>
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span className="text-green-400 text-sm">Online</span>
+            <div className="flex items-center gap-4">
+              
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <span className="text-green-400 text-sm">Online</span>
+              </div>
             </div>
           </div>
 
@@ -2342,8 +2446,16 @@ const LanguageLearningMVP = () => {
             </h1>
             <p className="text-slate-400 mt-1">Track your progress and customize your experience</p>
           </div>
-          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg">
-            M
+          <div className="flex items-center gap-4">
+            <GlobalLanguageToggle 
+              className="w-40" 
+              globalLanguage={globalLanguage}
+              onLanguageChange={handleGlobalLanguageChange}
+              compact={true}
+            />
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+              M
+            </div>
           </div>
         </div>
 
@@ -2386,7 +2498,7 @@ const LanguageLearningMVP = () => {
                   </div>
                   <div className="text-center md:text-left flex-1">
                     <h2 className={`font-bold mb-2 ${fontSize === 'text-sm' ? 'text-xl' : fontSize === 'text-base' ? 'text-2xl' : 'text-3xl'}`}>
-                      Mohamed el Morabit
+                      Mohamed Ebrahim.
                     </h2>
                     <p className="text-blue-200 text-lg">Language Explorer</p>
                     <div className="flex flex-wrap gap-2 mt-3 justify-center md:justify-start">
@@ -3362,7 +3474,7 @@ const LanguageLearningMVP = () => {
     switch (currentScreen) {
       case 'home': return <HomeScreen />;
       case 'lessons': return <LessonsScreen />;
-      case 'quiz': return <QuizScreenEnhanced selectedLanguage={selectedLanguage} onFinish={(score, total) => setQuizScore(score)} />;
+      case 'quiz': return <QuizScreenEnhanced selectedLanguage={selectedLanguage} onFinish={(score, total) => setQuizScore(score)} globalLanguage={globalLanguage} onGlobalLanguageChange={handleGlobalLanguageChange} />;
       case 'ai-coach': return <AICoachScreen t={t} selectedLanguage={selectedLanguage} speakText={speakText} fontSize={fontSize} />;
       case 'profile': return <ProfileScreen />;
       case 'settings': return <SettingsScreen />;
@@ -3482,7 +3594,7 @@ const LanguageLearningMVP = () => {
                 title="Sign Out"
                 aria-label="Sign Out"
               >
-                <User size={16} />
+                <LogOut size={16} />
               </button>
             </div>
           </div>

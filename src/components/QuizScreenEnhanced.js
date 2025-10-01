@@ -1,8 +1,55 @@
 import React, { useState } from 'react';
 import EnhancedQuiz from './EnhancedQuiz';
 import Quiz from '../quiz';
+import { Globe } from 'lucide-react';
 
-const QuizScreenEnhanced = ({ selectedLanguage = "english", onFinish }) => {
+// Global Language Toggle Component
+const GlobalLanguageToggle = ({ globalLanguage, onLanguageChange, className = "", compact = false }) => (
+  <div className={`bg-slate-800/80 backdrop-blur-lg rounded-2xl shadow-xl border border-slate-700/60 ${compact ? 'p-2' : 'p-4'} ${className}`}>
+    {!compact && (
+      <div className="flex items-center gap-2 mb-3">
+        <Globe className="text-blue-400" size={18} />
+        <span className="font-semibold text-white text-sm">{globalLanguage === 'arabic' ? 'اللغة' : 'Language'}</span>
+      </div>
+    )}
+    
+    <div className={`flex gap-2 ${compact ? 'gap-1' : 'gap-3'}`}>
+      <button
+        onClick={() => onLanguageChange('english')}
+        className={`flex-1 ${compact ? 'p-2' : 'p-3'} rounded-xl border-2 transition-all duration-300 hover:scale-105 ${
+          globalLanguage === 'english'
+            ? 'border-blue-500 bg-gradient-to-br from-blue-500/30 to-blue-600/30 shadow-lg shadow-blue-500/30 text-white'
+            : 'border-slate-600 bg-slate-700/40 hover:border-slate-500 hover:bg-slate-700/60 text-slate-300'
+        }`}
+      >
+        <div className="flex flex-col items-center gap-1">
+          <span className={`${compact ? 'text-lg' : 'text-xl'}`}>🇺🇸</span>
+          <span className={`font-medium ${compact ? 'text-xs' : 'text-sm'} ${globalLanguage === 'english' ? 'text-white' : 'text-slate-300'}`}>
+            English
+          </span>
+        </div>
+      </button>
+      
+      <button
+        onClick={() => onLanguageChange('arabic')}
+        className={`flex-1 ${compact ? 'p-2' : 'p-3'} rounded-xl border-2 transition-all duration-300 hover:scale-105 ${
+          globalLanguage === 'arabic'
+            ? 'border-green-500 bg-gradient-to-br from-green-500/30 to-green-600/30 shadow-lg shadow-green-500/30 text-white'
+            : 'border-slate-600 bg-slate-700/40 hover:border-slate-500 hover:bg-slate-700/60 text-slate-300'
+        }`}
+      >
+        <div className="flex flex-col items-center gap-1">
+          <span className={`${compact ? 'text-lg' : 'text-xl'}`}>🇸🇦</span>
+          <span className={`font-medium ${compact ? 'text-xs' : 'text-sm'} ${globalLanguage === 'arabic' ? 'text-white' : 'text-slate-300'}`}>
+            العربية
+          </span>
+        </div>
+      </button>
+    </div>
+  </div>
+);
+
+const QuizScreenEnhanced = ({ selectedLanguage = "english", onFinish, globalLanguage, onGlobalLanguageChange }) => {
   const [useEnhancedQuiz, setUseEnhancedQuiz] = useState(true);
   const [quizFinished, setQuizFinished] = useState(false);
   const [finalScore, setFinalScore] = useState(null);
@@ -154,6 +201,19 @@ const QuizScreenEnhanced = ({ selectedLanguage = "english", onFinish }) => {
 
   return (
     <div className="space-y-6">
+      {/* Header with Language Toggle */}
+      <div className="flex items-center justify-between p-4">
+        <h1 className="text-white text-2xl font-bold">Quiz Challenge</h1>
+        {globalLanguage && onGlobalLanguageChange && (
+          <GlobalLanguageToggle 
+            className="w-40" 
+            globalLanguage={globalLanguage}
+            onLanguageChange={onGlobalLanguageChange}
+            compact={true}
+          />
+        )}
+      </div>
+
       {/* Quiz Type Toggle */}
       <div className="flex justify-center">
         <div className="bg-slate-800 rounded-xl p-1">
