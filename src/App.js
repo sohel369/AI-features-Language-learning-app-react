@@ -76,8 +76,6 @@ const HomePage = () => {
 const INTERFACE_LANGUAGES = {
   english: { name: 'English', flag: '🇺🇸', rtl: false },
   arabic: { name: 'العربية', flag: '🇸🇦', rtl: true },
-  french: { name: 'Français', flag: '🇫🇷', rtl: false },
-  spanish: { name: 'Español', flag: '🇪🇸', rtl: false },
   dutch: { name: 'Nederlands', flag: '🇳🇱', rtl: false },
   indonesian: { name: 'Bahasa Indonesia', flag: '🇮🇩', rtl: false },
   malay: { name: 'Bahasa Melayu', flag: '🇲🇾', rtl: false },
@@ -617,152 +615,6 @@ const TRANSLATIONS = {
     fillBlank: 'បំពេញទទេ:',
     matchPairs: 'ផ្គូផ្គង:',
     trueFalse: 'ពិត ឬមិនពិត:'
-  },
-  french: {
-    welcomeBack: 'Bon retour ! 👋',
-    readyToContinue: 'Prêt à continuer à apprendre ?',
-    dayStreak: 'Série de jours',
-    totalXP: 'XP total',
-    level: 'Niveau',
-    selectLanguage: 'Sélectionner la langue',
-    continueLesson: 'Continuer la leçon',
-    aiCoach: 'Coach IA',
-    lessons: 'Leçons',
-    courseProgress: 'Progrès du cours',
-    beginnerLevel: 'Niveau débutant',
-    intermediateLevel: 'Niveau intermédiaire',
-    advancedLevel: 'Niveau avancé',
-    quizChallenge: 'Défi quiz',
-    nextQuestion: 'Question suivante',
-    finishQuiz: 'Terminer le quiz',
-    aiLanguageCoach: 'Coach linguistique IA',
-    pronunciationCoach: 'Coach de prononciation',
-    say: 'Dites : ',
-    analyzingPronunciation: 'L\'IA analyse votre prononciation...',
-    chatWithAiTutor: 'Chatter avec le tuteur IA',
-    askAboutLearning: 'Demandez-moi n\'importe quoi sur l\'apprentissage des langues...',
-    send: 'Envoyer',
-    profile: 'Profil',
-    achievements: 'Réalisations',
-    weeklyLeaderboard: 'Classement hebdomadaire',
-    settings: 'Paramètres',
-    accessibility: 'Accessibilité',
-    fontSize: 'Taille de police',
-    highContrast: 'Contraste élevé',
-    captions: 'Sous-titres',
-    languagePreferences: 'Préférences linguistiques',
-    interfaceLanguage: 'Langue de l\'interface',
-    autoPlayAudio: 'Lecture automatique audio',
-    notifications: 'Notifications',
-    dailyReminders: 'Rappels quotidiens',
-    achievementAlerts: 'Alertes de réussite',
-    streakWarnings: 'Avertissements de série',
-    account: 'Compte',
-    privacyPolicy: 'Politique de confidentialité',
-    termsOfService: 'Conditions d\'utilisation',
-    exportData: 'Exporter les données',
-    deleteAccount: 'Supprimer le compte',
-    small: 'Petit',
-    medium: 'Moyen',
-    large: 'Grand',
-    placementTest: 'Test de placement',
-    findLevel: 'Trouvons votre niveau de départ parfait',
-    question: 'Question',
-    startLearning: 'Commencer à apprendre !',
-    placementComplete: 'Test de placement terminé !',
-    yourLevel: 'Votre niveau :',
-    score: 'Score :',
-    liveTeacherSupport: 'Support enseignant en direct',
-    live: 'En direct',
-    offline: 'Hors ligne',
-    recentCorrections: 'Corrections récentes',
-    schedulePrivateLesson: 'Programmer une leçon privée',
-    home: 'Accueil',
-    lessonsNav: 'Leçons',
-    quizNav: 'Quiz',
-    aiCoachNav: 'Coach IA',
-    profileNav: 'Profil',
-    typeMessage: 'Tapez votre message...',
-    fillBlank: 'Remplissez le vide :',
-    matchPairs: 'Associez les paires :',
-    trueFalse: 'Vrai ou Faux :',
-    ttsInput: 'Entrée TTS',
-    typeTextToSpeak: 'Tapez le texte à prononcer',
-    playAudio: 'Lire l\'audio',
-    selectLanguage: 'Sélectionner la langue'
-  },
-  spanish: {
-    welcomeBack: '¡Bienvenido de vuelta! 👋',
-    readyToContinue: '¿Listo para continuar aprendiendo?',
-    dayStreak: 'Racha de días',
-    totalXP: 'XP total',
-    level: 'Nivel',
-    selectLanguage: 'Seleccionar idioma',
-    continueLesson: 'Continuar lección',
-    aiCoach: 'Entrenador IA',
-    lessons: 'Lecciones',
-    courseProgress: 'Progreso del curso',
-    beginnerLevel: 'Nivel principiante',
-    intermediateLevel: 'Nivel intermedio',
-    advancedLevel: 'Nivel avanzado',
-    quizChallenge: 'Desafío de quiz',
-    nextQuestion: 'Siguiente pregunta',
-    finishQuiz: 'Terminar quiz',
-    aiLanguageCoach: 'Entrenador de idiomas IA',
-    pronunciationCoach: 'Entrenador de pronunciación',
-    say: 'Di: ',
-    analyzingPronunciation: 'La IA está analizando tu pronunciación...',
-    chatWithAiTutor: 'Chatear con tutor IA',
-    askAboutLearning: 'Pregúntame cualquier cosa sobre el aprendizaje de idiomas...',
-    send: 'Enviar',
-    profile: 'Perfil',
-    achievements: 'Logros',
-    weeklyLeaderboard: 'Tabla de clasificación semanal',
-    settings: 'Configuración',
-    accessibility: 'Accesibilidad',
-    fontSize: 'Tamaño de fuente',
-    highContrast: 'Alto contraste',
-    captions: 'Subtítulos',
-    languagePreferences: 'Preferencias de idioma',
-    interfaceLanguage: 'Idioma de la interfaz',
-    autoPlayAudio: 'Reproducción automática de audio',
-    notifications: 'Notificaciones',
-    dailyReminders: 'Recordatorios diarios',
-    achievementAlerts: 'Alertas de logros',
-    streakWarnings: 'Advertencias de racha',
-    account: 'Cuenta',
-    privacyPolicy: 'Política de privacidad',
-    termsOfService: 'Términos de servicio',
-    exportData: 'Exportar datos',
-    deleteAccount: 'Eliminar cuenta',
-    small: 'Pequeño',
-    medium: 'Mediano',
-    large: 'Grande',
-    placementTest: 'Prueba de ubicación',
-    findLevel: 'Encontremos tu nivel de inicio perfecto',
-    question: 'Pregunta',
-    startLearning: '¡Comenzar a aprender!',
-    placementComplete: '¡Prueba de ubicación completada!',
-    yourLevel: 'Tu nivel:',
-    score: 'Puntuación:',
-    liveTeacherSupport: 'Soporte de profesor en vivo',
-    live: 'En vivo',
-    offline: 'Sin conexión',
-    recentCorrections: 'Correcciones recientes',
-    schedulePrivateLesson: 'Programar lección privada',
-    home: 'Inicio',
-    lessonsNav: 'Lecciones',
-    quizNav: 'Quiz',
-    aiCoachNav: 'Entrenador IA',
-    profileNav: 'Perfil',
-    typeMessage: 'Escribe tu mensaje...',
-    fillBlank: 'Completa el espacio en blanco:',
-    matchPairs: 'Empareja las parejas:',
-    trueFalse: 'Verdadero o Falso:',
-    ttsInput: 'Entrada TTS',
-    typeTextToSpeak: 'Escribe el texto para pronunciar',
-    playAudio: 'Reproducir audio',
-    selectLanguage: 'Seleccionar idioma'
   }
 };
 
@@ -943,8 +795,6 @@ const LanguageLearningMVP = () => {
 
         const langMap = {
           arabic: 'الاصطناعي',     // you can also try 'ar-XA'
-          french: 'fr-FR',
-          spanish: 'es-ES',
           dutch: 'nl-NL',
           indonesian: 'id-ID',
           malay: 'ms-MY',
@@ -1339,8 +1189,6 @@ const LanguageLearningMVP = () => {
   const LANG_CODES = {
     english: 'en-US',
     arabic: 'ar-SA',
-    french: 'fr-FR',
-    spanish: 'es-ES',
     dutch: 'nl-NL',
     indonesian: 'id-ID',
     malay: 'ms-MY',
@@ -1698,24 +1546,19 @@ const LanguageLearningMVP = () => {
 
     // Auto language detection function
     const detectLanguage = (text) => {
-      // Check for Arabic characters
+      // Check for Arabic characters (including diacritics)
       if (/[\u0600-\u06FF]/.test(text)) {
         return 'arabic';
       }
-      // Check for other language patterns
-      if (/[àáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ]/.test(text)) {
-        return 'french';
+      // Check for Thai characters
+      if (/[\u0E00-\u0E7F]/.test(text)) {
+        return 'thai';
       }
-      if (/[ñáéíóúü]/.test(text)) {
-        return 'spanish';
+      // Check for Khmer characters
+      if (/[\u1780-\u17FF]/.test(text)) {
+        return 'khmer';
       }
-      if (/[äöüß]/.test(text)) {
-        return 'german';
-      }
-      if (/[àèéìíîòóù]/.test(text)) {
-        return 'italian';
-      }
-      // Default to English
+      // Default to English (also covers Dutch, Indonesian, Malay as they use Latin alphabet)
       return 'english';
     };
 
@@ -1885,8 +1728,6 @@ const LanguageLearningMVP = () => {
         recognitionRef.current.interimResults = true;
         const langMap = {
           arabic: 'ar-SA',
-          french: 'fr-FR',
-          spanish: 'es-ES',
           dutch: 'nl-NL',
           indonesian: 'id-ID',
           malay: 'ms-MY',
@@ -2050,8 +1891,6 @@ const LanguageLearningMVP = () => {
         const responses = {
           english: `Great! I detected you're speaking English. You said: "${inputMessage}". ${grammar.length > 0 ? `Corrected: "${corrected}".` : ''} Excellent pronunciation! What would you like to practice next?`,
           arabic: `ممتاز! لقد اكتشفت أنك تتحدث العربية. قلت: "${inputMessage}". ${grammar.length > 0 ? `المصحح: "${corrected}".` : ''} نطق ممتاز! ماذا تريد أن تتدرب عليه بعد ذلك؟`,
-          french: `Excellent! J'ai détecté que vous parlez français. Vous avez dit: "${inputMessage}". ${grammar.length > 0 ? `Corrigé: "${corrected}".` : ''} Excellente prononciation! Que voulez-vous pratiquer ensuite?`,
-          spanish: `¡Excelente! Detecté que hablas español. Dijiste: "${inputMessage}". ${grammar.length > 0 ? `Corregido: "${corrected}".` : ''} ¡Excelente pronunciación! ¿Qué quieres practicar después?`,
           dutch: `Geweldig! Ik heb gedetecteerd dat je Nederlands spreekt. Je zei: "${inputMessage}". ${grammar.length > 0 ? `Gecorrigeerd: "${corrected}".` : ''} Uitstekende uitspraak! Wat wil je daarna oefenen?`,
           indonesian: `Bagus! Saya mendeteksi Anda berbicara bahasa Indonesia. Anda berkata: "${inputMessage}". ${grammar.length > 0 ? `Dikoreksi: "${corrected}".` : ''} Pengucapan yang bagus! Apa yang ingin Anda latih selanjutnya?`,
           malay: `Bagus! Saya mengesan anda bercakap bahasa Melayu. Anda berkata: "${inputMessage}". ${grammar.length > 0 ? `Dibetulkan: "${corrected}".` : ''} Sebutan yang bagus! Apa yang anda mahu latih seterusnya?`,
@@ -2295,17 +2134,17 @@ const LanguageLearningMVP = () => {
         const user = auth.currentUser;
 
         if (!user) {
-          alert("দয়া করে লগ ইন করুন যাতে ভাষা পরিবর্তন করা যায়।");
+          alert("Please login to change setting.");
           return;
         }
 
         try {
           await AuthService.updateBaseLanguage(user.uid, newLanguage);
-          console.log("ভাষা সফলভাবে আপডেট হয়েছে:", newLanguage);
-          alert(`ভাষা ${newLanguage} এ পরিবর্তিত হয়েছে।`);
+          console.log("Language updated:", newLanguage);
+          alert(`Language ${newLanguage} updated.`);
         } catch (error) {
-          console.error("ভাষা আপডেট করতে সমস্যা হয়েছে:", error);
-          alert("ভাষা আপডেট করতে সমস্যা হয়েছে। পুনরায় চেষ্টা করুন।");
+          console.error("Language update error:", error);
+          alert("Language update failed. Please try again.");
         }
       };
 
@@ -2329,13 +2168,13 @@ const LanguageLearningMVP = () => {
       const user = auth.currentUser;
 
       if (!user) {
-        // ব্যবহারকারী লগইন নেই
+        // User is not logged in
         alert("Please login to change setting.");
         return;
       }
 
       try {
-        // লগইন থাকলে ভাষা আপডেট করুন
+        // If user is logged in, update the language
         await AuthService.updateBaseLanguage(user.uid, newLanguage);
         console.log("Language updated:", newLanguage);
       } catch (error) {
