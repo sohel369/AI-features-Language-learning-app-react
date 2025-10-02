@@ -3,11 +3,15 @@ import TextToSpeech from "./TextToSpeech";
 import Quiz from "./quiz.js";
 import QuizScreenEnhanced from "./components/QuizScreenEnhanced";
 import LanguageSelection from "./components/LanguageSelection";
-import authService from "./services/AuthService";
-import databaseService from "./services/DatabaseService";
-import ProtectedRoute from "./components/protectroute";
-import { BrowserRouter as Router, Routes, Route, useNavigate, Navigate } from 'react-router-dom';
+import { UserProvider, UserContext } from "./context/userContext";
+import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import AuthForm from "./components/AuthForm";
+import ProfileScreen from "./components/ProfileScreen";
+import FirebaseDiagnostic from "./components/FirebaseDiagnostic";
+import FirebaseSetupTest from "./components/FirebaseSetupTest";
+import ProtectedHome from "./components/ProtectedHome";
+import firebaseAuthService from "./services/FirebaseAuthService";
+
 
 
 
@@ -95,36 +99,37 @@ const GlobalLanguageToggle = ({ globalLanguage, onLanguageChange, className = ""
   </div>
 );
 
+const AuthWrapper = () => {
+  const { isAuthenticated, isLoading } = React.useContext(UserContext);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
+        <div className="text-center">
+          <div className="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to="/home" replace />;
+  }
+
+  return <AuthForm />;
+};
+
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<AuthForm />} />
-        <Route path="/home" element={<HomePage />} />
-      </Routes>
-    </Router>
+    <UserProvider>
+      <LanguageLearningMVP />
+    </UserProvider>
   );
 }
 
 
-const HomePage = () => {
-  const user = JSON.parse(localStorage.getItem('user'));
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    navigate('/'); // back to login
-  };
-
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 text-white">
-      <h1 className="text-2xl mb-4">Welcome, {user?.displayName || 'User'} 🎉</h1>
-      <button onClick={handleLogout} className="px-6 py-3 bg-red-600 rounded-xl">
-        Logout
-      </button>
-    </div>
-  );
-};
+// HomePage component moved to src/components/HomePage.js
 
 const INTERFACE_LANGUAGES = {
   english: { name: 'English', flag: '🇺🇸', rtl: false },
@@ -779,9 +784,10 @@ const PLACEMENT_QUESTIONS = {
 };
 
 const LanguageLearningMVP = () => {
-  // Authentication states
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  // Get authentication state from UserContext
+  const { user, userData, isAuthenticated, isLoading } = React.useContext(UserContext);
+  
+  // Local states
   const [showAuthForm, setShowAuthForm] = useState(false);
   const [showLanguageSelection, setShowLanguageSelection] = useState(false);
   const [authError, setAuthError] = useState('');
@@ -915,53 +921,38 @@ const LanguageLearningMVP = () => {
   }, [globalLanguage]);
 
 
-  // Authentication effect
+  // Handle authentication state changes
   useEffect(() => {
-    const unsubscribe = authService.onAuthStateChanged((user, userData) => {
-      console.log('Auth state changed:', { user: !!user, userData: !!userData });
+    if (isAuthenticated && user) {
+      console.log('User authenticated, setting up user data...');
+      setUserProgress({
+        xp: 0,
+        streak: 0,
+        level: 1,
+        badges: []
+      });
+      setLearningLanguages([]);
+      setSelectedLanguage('english');
+      setUserSettings({
+        darkMode: false,
+        notifications: true,
+        sound: true,
+        fontSize: 'medium'
+      });
 
-      if (user && userData) {
-        console.log('User authenticated, setting up user data...');
-        setIsAuthenticated(true);
-        setUserProgress({
-          xp: userData.xp || 0,
-          streak: userData.streak || 0,
-          level: userData.level || 1,
-          badges: userData.badges || []
-        });
-        setLearningLanguages(userData.learningLanguages || []);
-        setSelectedLanguage(userData.baseLanguage || 'english');
-        setUserSettings(userData.settings || {
-          darkMode: false,
-          notifications: true,
-          sound: true,
-          fontSize: 'medium'
-        });
-
-        // Check if user needs language selection
-        if (!userData.learningLanguages || userData.learningLanguages.length === 0) {
-          setShowLanguageSelection(true);
-        } else {
-          setShowLanguageSelection(false);
-        }
-
-        // Ensure we're not showing auth form when user is authenticated
-        setShowAuthForm(false);
-        setCurrentScreen('home'); // Ensure we're on the home screen after login
-      } else {
-        console.log('User not authenticated, resetting state...');
-        setIsAuthenticated(false);
-        setUserProgress({ xp: 0, streak: 0, level: 1, badges: [] });
-        setLearningLanguages([]);
-        setShowLanguageSelection(false);
-        setShowAuthForm(false);
-        setCurrentScreen('home');
-      }
-      setIsLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
+      // Don't automatically show language selection - let user go to home first
+      setShowLanguageSelection(false);
+      setShowAuthForm(false);
+      setCurrentScreen('home');
+    } else if (!isAuthenticated && !isLoading) {
+      console.log('User not authenticated, resetting state...');
+      setUserProgress({ xp: 0, streak: 0, level: 1, badges: [] });
+      setLearningLanguages([]);
+      setShowLanguageSelection(false);
+      setShowAuthForm(false);
+      setCurrentScreen('home');
+    }
+  }, [isAuthenticated, user, isLoading]);
 
   // Load voices asynchronously
   useEffect(() => {
@@ -1004,71 +995,47 @@ const LanguageLearningMVP = () => {
 
   // Authentication handlers
   const handleAuthSuccess = async (authData) => {
-    setIsLoading(true);
     setAuthError('');
 
     try {
-      // Dev bypass (no login) to allow reaching home if Firebase misconfigured
-      if (authData.devBypass) {
-        setIsAuthenticated(true);
-        setShowAuthForm(false);
-        setCurrentScreen('home');
-        setIsLoading(false);
-        return;
-      }
-
       if (authData.isLogin) {
-        const result = await authService.signIn(authData.email, authData.password);
+        const result = await firebaseAuthService.signIn(authData.email, authData.password);
         if (result.success) {
-          // The onAuthStateChanged listener will handle setting isAuthenticated
           setShowAuthForm(false);
-          // Also navigate immediately
-          setIsAuthenticated(true);
           setCurrentScreen('home');
         } else {
           setAuthError(result.error);
         }
       } else {
-        const result = await authService.register(
+        const result = await firebaseAuthService.register(
           authData.email,
           authData.password,
-          authData.displayName,
-          [] // Empty learning languages, will be set in language selection
+          authData.displayName
         );
         if (result.success) {
-          // The onAuthStateChanged listener will handle setting isAuthenticated
           setShowAuthForm(false);
-          // Also navigate immediately
-          setIsAuthenticated(true);
           setCurrentScreen('home');
-          // Language selection will be handled by the auth listener
         } else {
           setAuthError(result.error);
         }
       }
     } catch (error) {
       setAuthError('An unexpected error occurred');
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleLanguageSelection = async (languageData) => {
-    setIsLoading(true);
     try {
-      await authService.updateLearningLanguages(languageData.learningLanguages);
-      await authService.updateBaseLanguage(languageData.baseLanguage);
+      await firebaseAuthService.updateLearningLanguages(languageData.learningLanguages);
+      await firebaseAuthService.updateBaseLanguage(languageData.baseLanguage);
       setShowLanguageSelection(false);
     } catch (error) {
       setAuthError('Failed to save language preferences');
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleSignOut = async () => {
-    await authService.signOut();
-    // The onAuthStateChanged listener will handle setting isAuthenticated to false
+    await firebaseAuthService.signOut();
     setCurrentScreen('home');
   };
 
@@ -2066,17 +2033,65 @@ const LanguageLearningMVP = () => {
     }, []);
 
     const startChatListening = useCallback(() => {
-      const rec = recognitionRef.current;
-      if (rec) {
-        rec.onresult = (e) => {
+      // Prevent multiple starts
+      if (isRecordingRef.current) return;
+
+      isRecordingRef.current = true;
+      setIsRecording(true);
+
+      if (recognitionRef.current) {
+        // Create a new SpeechRecognition instance for chat to avoid conflicts
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const chatRecognition = new SpeechRecognition();
+        chatRecognition.continuous = false;
+        chatRecognition.interimResults = false;
+        
+        // Set language for chat recognition
+        const langMap = {
+          arabic: 'ar-SA',
+          dutch: 'nl-NL',
+          indonesian: 'id-ID',
+          malay: 'ms-MY',
+          thai: 'th-TH',
+          khmer: 'km-KH',
+          english: 'en-US'
+        };
+        chatRecognition.lang = langMap[selectedLanguage] || 'en-US';
+
+        chatRecognition.onresult = (e) => {
           const text = e.results[0][0].transcript;
           setInputMessage(text);
+          isRecordingRef.current = false;
+          setIsRecording(false);
         };
-        rec.onerror = () => { };
-        rec.onend = () => { };
-        rec.start();
+        
+        chatRecognition.onerror = (e) => {
+          console.log('Chat SpeechRecognition error:', e.error);
+          isRecordingRef.current = false;
+          setIsRecording(false);
+        };
+        
+        chatRecognition.onend = () => {
+          isRecordingRef.current = false;
+          setIsRecording(false);
+        };
+        
+        try {
+          chatRecognition.start();
+        } catch (error) {
+          console.log('Chat SpeechRecognition start failed:', error);
+          isRecordingRef.current = false;
+          setIsRecording(false);
+        }
+      } else {
+        // Fallback simulation for chat
+        setTimeout(() => {
+          setInputMessage('Hello, how are you?');
+          isRecordingRef.current = false;
+          setIsRecording(false);
+        }, 2000);
       }
-    }, []);
+    }, [selectedLanguage]);
 
     const sendMessage = useCallback(() => {
       if (!inputMessage.trim()) return;
@@ -2310,10 +2325,11 @@ const LanguageLearningMVP = () => {
           <div className="flex space-x-2">
             <button
               onClick={startChatListening}
-              className="bg-blue-600 text-white p-3 rounded-xl hover:bg-blue-500 transition-colors"
-              aria-label="Speak message"
+              disabled={isRecording}
+              className={`text-white p-3 rounded-xl transition-colors ${isRecording ? 'bg-red-500 animate-pulse cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500'}`}
+              aria-label={isRecording ? 'Recording...' : 'Speak message'}
             >
-              <Mic size={20} />
+              {isRecording ? <MicOff size={20} /> : <Mic size={20} />}
             </button>
             <input
               type="text"
@@ -3503,8 +3519,11 @@ const LanguageLearningMVP = () => {
     );
   }
 
+  // Debug authentication state
+  console.log('LanguageLearningMVP - Auth State:', { isAuthenticated, isLoading, user: !!user });
+  
   // Show login prompt if not authenticated
-  if (!isAuthenticated) {
+  if (!isAuthenticated && !isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-slate-800/50 backdrop-blur-sm rounded-2xl p-8 border border-slate-700 text-center">
@@ -3529,8 +3548,12 @@ const LanguageLearningMVP = () => {
     );
   }
 
-  return (
-    <div className={`min-h-screen ${highContrast ? 'bg-black text-white' : 'bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800'} text-white`}>
+  // Show main app only if authenticated
+  if (isAuthenticated) {
+    return (
+      <div className={`min-h-screen ${highContrast ? 'bg-black text-white' : 'bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800'} text-white`}>
+      {/* Authentication Flow Tracker Removed - Home page kept clean */}
+
       {/* Header */}
       <header className="sticky top-0 bg-slate-900/95 backdrop-blur-sm border-b border-slate-700 p-4 z-40">
         <div className="flex items-center justify-between">
@@ -3547,6 +3570,14 @@ const LanguageLearningMVP = () => {
           <div className="flex items-center space-x-2">
             {currentScreen === 'home' && (
               <>
+                <button
+                  onClick={() => setShowLanguageSelection(true)}
+                  className="p-2 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-lg hover:from-blue-500 hover:to-cyan-500 transition-all focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  title="Select Languages"
+                  aria-label="Select Languages"
+                >
+                  <Globe size={16} />
+                </button>
                 <button
                   onClick={() => setCurrentScreen('placement')}
                   className="p-2 bg-gradient-to-br from-green-600 to-blue-600 rounded-lg hover:from-green-500 hover:to-blue-500 transition-all focus:outline-none focus:ring-2 focus:ring-green-400"
@@ -3635,7 +3666,27 @@ const LanguageLearningMVP = () => {
         </div>
       </div>
     </div>
+    );
+  }
+
+  // Fallback - should not reach here if authentication is working properly
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 flex items-center justify-center p-4">
+      <div className="text-center">
+        <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <User className="w-8 h-8 text-white" />
+        </div>
+        <h1 className="text-2xl font-bold text-white mb-2">Authentication Error</h1>
+        <p className="text-slate-400 mb-6">Please refresh the page and try again</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-500 transition-colors"
+        >
+          Refresh Page
+        </button>
+      </div>
+    </div>
   );
 };
 
-export default LanguageLearningMVP;
+export default App;

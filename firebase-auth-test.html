@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Authentication Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        input:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .register-btn {
+            background-color: #28a745;
+        }
+        .register-btn:hover {
+            background-color: #1e7e34;
+        }
+        .signout-btn {
+            background-color: #dc3545;
+        }
+        .signout-btn:hover {
+            background-color: #c82333;
+        }
+        .message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .user-info {
+            background-color: #e7f3ff;
+            padding: 20px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .instructions {
+            background-color: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            border: 1px solid #ffeaa7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔥 Firebase Authentication Test</h1>
+        <p style="text-align: center; color: #666;">Testing Email/Password Authentication with Free Spark Plan</p>
+        
+        <div id="auth-form">
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" placeholder="test@example.com" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" placeholder="password123" minlength="6" required>
+            </div>
+            
+            <button id="register-btn" class="register-btn">Test Registration</button>
+            <button id="signin-btn">Test Sign In</button>
+        </div>
+        
+        <div id="user-info" class="user-info" style="display: none;">
+            <h3>✅ User Authenticated!</h3>
+            <p><strong>Email:</strong> <span id="user-email"></span></p>
+            <p><strong>UID:</strong> <span id="user-uid"></span></p>
+            <button id="signout-btn" class="signout-btn">Sign Out</button>
+        </div>
+        
+        <div id="message"></div>
+        
+        <div class="instructions">
+            <h3>Test Instructions:</h3>
+            <ol>
+                <li>Enter a test email and password (minimum 6 characters)</li>
+                <li>Click "Test Registration" to create a new account</li>
+                <li>Click "Test Sign In" to sign in with existing credentials</li>
+                <li>Check browser console (F12) for detailed logs</li>
+                <li>Make sure Firebase project has Email/Password authentication enabled</li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCycwpCYKj3KNvqezPGWLs9VUbtroUacDw",
+            authDomain: "reactlanguageapp.firebaseapp.com",
+            projectId: "reactlanguageapp",
+            storageBucket: "reactlanguageapp.appspot.com",
+            messagingSenderId: "49661302046",
+            appId: "1:49661302046:web:b50c4f1aca2baafa23e50f"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        // DOM elements
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const registerBtn = document.getElementById('register-btn');
+        const signinBtn = document.getElementById('signin-btn');
+        const signoutBtn = document.getElementById('signout-btn');
+        const messageDiv = document.getElementById('message');
+        const authForm = document.getElementById('auth-form');
+        const userInfo = document.getElementById('user-info');
+        const userEmail = document.getElementById('user-email');
+        const userUid = document.getElementById('user-uid');
+
+        // Show message
+        function showMessage(text, isError = false) {
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${isError ? 'error' : 'success'}`;
+            messageDiv.style.display = 'block';
+        }
+
+        // Hide message
+        function hideMessage() {
+            messageDiv.style.display = 'none';
+        }
+
+        // Show loading state
+        function setLoading(loading) {
+            registerBtn.disabled = loading;
+            signinBtn.disabled = loading;
+            signoutBtn.disabled = loading;
+        }
+
+        // Register user
+        registerBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            
+            if (!email || !password) {
+                showMessage('Please enter both email and password', true);
+                return;
+            }
+
+            setLoading(true);
+            hideMessage();
+
+            try {
+                console.log('Attempting registration...');
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                console.log('Registration successful:', userCredential.user);
+                showMessage('✅ Registration successful!');
+                emailInput.value = '';
+                passwordInput.value = '';
+            } catch (error) {
+                console.error('Registration error:', error);
+                showMessage(`❌ Registration failed: ${error.message}`, true);
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        // Sign in user
+        signinBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            
+            if (!email || !password) {
+                showMessage('Please enter both email and password', true);
+                return;
+            }
+
+            setLoading(true);
+            hideMessage();
+
+            try {
+                console.log('Attempting sign in...');
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                console.log('Sign in successful:', userCredential.user);
+                showMessage('✅ Sign in successful!');
+                emailInput.value = '';
+                passwordInput.value = '';
+            } catch (error) {
+                console.error('Sign in error:', error);
+                showMessage(`❌ Sign in failed: ${error.message}`, true);
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        // Sign out user
+        signoutBtn.addEventListener('click', async () => {
+            setLoading(true);
+            try {
+                await signOut(auth);
+                console.log('Sign out successful');
+                showMessage('✅ Signed out successfully!');
+            } catch (error) {
+                console.error('Sign out error:', error);
+                showMessage(`❌ Sign out failed: ${error.message}`, true);
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        // Listen to authentication state changes
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                console.log('User signed in:', user);
+                authForm.style.display = 'none';
+                userInfo.style.display = 'block';
+                userEmail.textContent = user.email;
+                userUid.textContent = user.uid;
+            } else {
+                console.log('User signed out');
+                authForm.style.display = 'block';
+                userInfo.style.display = 'none';
+            }
+        });
+
+        console.log('Firebase Authentication Test loaded successfully!');
+        console.log('Firebase config:', firebaseConfig);
+    </script>
+</body>
+</html>
+

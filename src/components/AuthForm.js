@@ -2,7 +2,8 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, Mail, Lock, User, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import authService from '../services/AuthService';
+import firebaseAuthService from '../services/FirebaseAuthService';
+// Removed debugging imports to keep login page clean
 
 const AuthForm = ({ onBack, isLoading = false }) => {
   const [isLogin, setIsLogin] = useState(true);
@@ -71,13 +72,58 @@ const AuthForm = ({ onBack, isLoading = false }) => {
     setSubmitError('');
     try {
       if (isLogin) {
-        const res = await authService.signIn(formData.email, formData.password);
-        if (!res.success) throw new Error(res.error);
+        const res = await firebaseAuthService.signIn(formData.email, formData.password);
+        if (!res.success) {
+          // Handle specific sign-in errors
+          if (res.error.includes('user-not-found')) {
+            setSubmitError('No account found with this email. Please register first.');
+          } else if (res.error.includes('wrong-password')) {
+            setSubmitError('Incorrect password. Please try again.');
+          } else if (res.error.includes('too-many-requests')) {
+            setSubmitError('Too many failed attempts. Please try again later.');
+          } else {
+            setSubmitError(res.error);
+          }
+          return;
+        }
+        console.log("Login successful:", res);
       } else {
-        const res = await authService.register(formData.email, formData.password, formData.displayName);
-        if (!res.success) throw new Error(res.error);
+        const res = await firebaseAuthService.register(formData.email, formData.password, formData.displayName);
+        if (!res.success) {
+          // Handle specific registration errors
+          if (res.error.includes('email-already-in-use')) {
+            setSubmitError('This email is already registered. Please try signing in instead.');
+            // Auto-switch to login mode
+            setTimeout(() => {
+              setIsLogin(true);
+              setFormData({
+                email: formData.email,
+                password: '',
+                confirmPassword: '',
+                displayName: ''
+              });
+            }, 2000);
+          } else if (res.error.includes('weak-password')) {
+            setSubmitError('Password should be at least 6 characters long.');
+          } else if (res.error.includes('invalid-email')) {
+            setSubmitError('Please enter a valid email address.');
+          } else if (res.error.includes('configuration-not-found')) {
+            setSubmitError('Firebase Authentication is not enabled. Please enable it in Firebase Console.');
+          } else {
+            setSubmitError(res.error);
+          }
+          return;
+        }
+        console.log("Registration successful:", res);
+        console.log("User after registration:", res.user);
       }
-      navigate('/home', { replace: true });
+      
+      // Wait a moment for authentication state to update
+      console.log("Waiting for auth state to update...");
+      setTimeout(() => {
+        console.log("Navigating to /home");
+        navigate('/home', { replace: true });
+      }, 1000);
     } catch (err) {
       setSubmitError(err.message || 'Authentication failed');
     } finally {
@@ -273,6 +319,8 @@ const AuthForm = ({ onBack, isLoading = false }) => {
             </button>
           </p>
         </div>
+
+        {/* Debug Information Removed - Login page kept clean */}
       </div>
     </div>
   );
