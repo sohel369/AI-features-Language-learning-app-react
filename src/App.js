@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, useContext } from 'react';
 import TextToSpeech from "./TextToSpeech";
 import Quiz from "./quiz.js";
 import QuizScreenEnhanced from "./components/QuizScreenEnhanced";
@@ -11,6 +11,7 @@ import FirebaseDiagnostic from "./components/FirebaseDiagnostic";
 import FirebaseSetupTest from "./components/FirebaseSetupTest";
 import ProtectedHome from "./components/ProtectedHome";
 import firebaseAuthService from "./services/FirebaseAuthService";
+import notificationService from "./services/NotificationService";
 
 
 
@@ -823,6 +824,16 @@ const LanguageLearningMVP = () => {
   // PWA Install Prompt state
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallPrompt, setShowInstallPrompt] = useState(true);
+  const [isInstalled, setIsInstalled] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState('default');
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [notificationStats, setNotificationStats] = useState({
+    total: 0,
+    learningReminders: 0,
+    liveSessions: 0,
+    achievements: 0,
+    progress: 0
+  });
 
   // Get current language with RTL support
   const currentLanguage = useMemo(() => INTERFACE_LANGUAGES[selectedLanguage], [selectedLanguage]);
@@ -852,6 +863,109 @@ const LanguageLearningMVP = () => {
       document.documentElement.setAttribute('dir', isRTL ? 'rtl' : 'ltr');
       document.documentElement.setAttribute('lang', savedLanguage);
     }
+  }, []);
+
+  // Function to track notifications
+  const trackNotification = (type) => {
+    setNotificationCount(prev => prev + 1);
+    setNotificationStats(prev => ({
+      ...prev,
+      total: prev.total + 1,
+      [type]: prev[type] + 1
+    }));
+    
+    // Save to localStorage
+    const stats = {
+      ...notificationStats,
+      total: notificationStats.total + 1,
+      [type]: notificationStats[type] + 1
+    };
+    localStorage.setItem('notificationStats', JSON.stringify(stats));
+  };
+
+  // Load notification stats from localStorage
+  useEffect(() => {
+    const savedStats = localStorage.getItem('notificationStats');
+    if (savedStats) {
+      try {
+        const stats = JSON.parse(savedStats);
+        setNotificationStats(stats);
+        setNotificationCount(stats.total);
+      } catch (error) {
+        console.error('Error loading notification stats:', error);
+      }
+    }
+  }, []);
+
+  // PWA Installation and Notification Setup
+  useEffect(() => {
+    // Check if app is already installed
+    const checkInstallStatus = () => {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      const isIOSStandalone = window.navigator.standalone === true;
+      const isInApp = window.matchMedia('(display-mode: fullscreen)').matches;
+      
+      if (isStandalone || isIOSStandalone || isInApp) {
+        setIsInstalled(true);
+        setShowInstallPrompt(false);
+        console.log('App is already installed');
+      } else {
+        console.log('App is not installed');
+      }
+    };
+
+    // Check notification permission
+    const checkNotificationPermission = () => {
+      if ('Notification' in window) {
+        setNotificationPermission(Notification.permission);
+        console.log('Notification permission:', Notification.permission);
+      }
+    };
+
+    // Setup PWA install prompt
+    const setupInstallPrompt = () => {
+      const handleBeforeInstallPrompt = (e) => {
+        console.log('beforeinstallprompt event fired');
+        e.preventDefault();
+        setDeferredPrompt(e);
+        setShowInstallPrompt(true);
+      };
+
+      const handleAppInstalled = () => {
+        console.log('PWA was installed');
+        setIsInstalled(true);
+        setShowInstallPrompt(false);
+        setDeferredPrompt(null);
+      };
+
+      window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.addEventListener('appinstalled', handleAppInstalled);
+
+      // Return cleanup function
+      return () => {
+        window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        window.removeEventListener('appinstalled', handleAppInstalled);
+      };
+    };
+
+    // Setup notification service
+    const setupNotifications = async () => {
+      if (notificationService.isNotificationSupported()) {
+        console.log('Notification service is supported');
+        setNotificationPermission(notificationService.getPermissionStatus());
+      } else {
+        console.log('Notification service is not supported');
+      }
+    };
+
+    // Initialize everything
+    checkInstallStatus();
+    checkNotificationPermission();
+    const cleanup = setupInstallPrompt();
+    setupNotifications();
+
+    // Cleanup
+    return cleanup;
   }, []);
 
   // Nav items
@@ -983,12 +1097,50 @@ const LanguageLearningMVP = () => {
 
   const handleInstallClick = async () => {
     if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        setShowInstallPrompt(false);
+      try {
+        console.log('Showing install prompt...');
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log(`User response to the install prompt: ${outcome}`);
+        
+        if (outcome === 'accepted') {
+          console.log('User accepted the install prompt');
+          setShowInstallPrompt(false);
+          setIsInstalled(true);
+          
+          // Setup notifications after installation
+          try {
+            const granted = await notificationService.requestPermission();
+            setNotificationPermission(notificationService.getPermissionStatus());
+            
+            if (granted) {
+              await notificationService.setupPushNotifications();
+              notificationService.scheduleLearningReminders();
+              
+              // Send welcome notification
+              notificationService.sendNotification('Welcome to LinguaAI! 🎉', {
+                body: 'Your language learning journey starts now. Let\'s begin!',
+                requireInteraction: true,
+                actions: [
+                  { action: 'start-learning', title: 'Start Learning' },
+                  { action: 'explore', title: 'Explore App' }
+                ]
+              });
+            }
+          } catch (error) {
+            console.error('Error setting up notifications:', error);
+          }
+        } else {
+          console.log('User dismissed the install prompt');
+        }
+      } catch (error) {
+        console.error('Error during installation:', error);
       }
       setDeferredPrompt(null);
+    } else {
+      console.log('No deferred prompt available');
+      // Fallback for browsers that don't support beforeinstallprompt
+      alert('To install this app, please use your browser\'s menu:\n\nChrome: Click the three dots menu → "Install LinguaAI"\nFirefox: Click the three dots menu → "Install"\nSafari: Click Share → "Add to Home Screen"');
     }
   };
 
@@ -1714,6 +1866,19 @@ const LanguageLearningMVP = () => {
         ]
       };
       setChatMessages(welcomeMessages[language] || welcomeMessages.english);
+      
+          // Send notification for AI Coach session start
+          if (notificationService.getPermissionStatus() === 'granted') {
+            notificationService.sendNotification('AI Coach Session Started! 🤖', {
+              body: `Your ${language} learning session with AI Coach is ready. Let's start learning!`,
+              requireInteraction: true,
+              actions: [
+                { action: 'continue-session', title: 'Continue Session' },
+                { action: 'dismiss', title: 'Dismiss' }
+              ]
+            });
+            trackNotification('liveSessions');
+          }
     };
 
     // Auto language detection function
@@ -2354,27 +2519,219 @@ const LanguageLearningMVP = () => {
   };
 
   const ProfileScreen = () => {
+    const { user, userData, isUpdating, updateProfile, updateSettings, updateLearningLanguages, updateBaseLanguage, logout, leaderboard } = useContext(UserContext);
+    
+    // Apply global settings
+    useEffect(() => {
+      if (userData?.settings) {
+        // Apply global settings directly
+        const { theme, fontSize, language, sound, notifications } = userData.settings;
+        
+        // Apply theme globally
+        if (theme === 'dark') {
+          document.documentElement.classList.add('dark');
+          document.documentElement.classList.remove('light');
+          document.body.classList.add('dark');
+          document.body.classList.remove('light');
+        } else if (theme === 'light') {
+          document.documentElement.classList.remove('dark');
+          document.documentElement.classList.add('light');
+          document.body.classList.remove('dark');
+          document.body.classList.add('light');
+        } else {
+          // System theme
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (prefersDark) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.classList.remove('light');
+            document.body.classList.add('dark');
+            document.body.classList.remove('light');
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.classList.add('light');
+            document.body.classList.remove('dark');
+            document.body.classList.add('light');
+          }
+        }
+        
+        // Apply font size globally
+        const fontSizeMap = {
+          small: '14px',
+          medium: '16px',
+          large: '18px'
+        };
+        const fontSizeValue = fontSizeMap[fontSize] || '16px';
+        document.documentElement.style.fontSize = fontSizeValue;
+        document.body.style.fontSize = fontSizeValue;
+        
+        // Apply language direction
+        if (language === 'arabic') {
+          document.documentElement.setAttribute('dir', 'rtl');
+          document.documentElement.setAttribute('lang', 'ar');
+          document.body.setAttribute('dir', 'rtl');
+          document.body.setAttribute('lang', 'ar');
+        } else {
+          document.documentElement.setAttribute('dir', 'ltr');
+          document.documentElement.setAttribute('lang', 'en');
+          document.body.setAttribute('dir', 'ltr');
+          document.body.setAttribute('lang', 'en');
+        }
+        
+        // Apply sound settings globally
+        window.userSoundEnabled = sound;
+        localStorage.setItem('userSoundEnabled', sound.toString());
+        
+        // Apply notification settings globally
+        window.userNotificationsEnabled = notifications;
+        localStorage.setItem('userNotificationsEnabled', notifications.toString());
+        
+        console.log('Global settings applied:', { theme, fontSize, language, sound, notifications });
+      }
+    }, [userData?.settings]);
     const [activeTab, setActiveTab] = useState('stats');
-    const [leaderboard, setLeaderboard] = useState([]);
-    const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
-    const [selectedLanguage, setSelectedLanguage] = useState('en');
-    const [learningLanguages, setLearningLanguages] = useState(['es']);
-    const [userSettings, setUserSettings] = useState({
-      darkMode: true,
-      notifications: true,
-      sound: true,
-      fontSize: 'medium'
+    const [formData, setFormData] = useState({
+      displayName: '',
+      email: ''
     });
+    const [settings, setSettings] = useState({
+      language: 'english',
+      fontSize: 'medium',
+      sound: true,
+      notifications: true,
+      theme: 'system'
+    });
+    const [learningLanguages, setLearningLanguages] = useState(['arabic']);
+    const [baseLanguage, setBaseLanguage] = useState('english');
+    const [isSaving, setIsSaving] = useState(false);
+    const [message, setMessage] = useState({ type: '', text: '' });
     const [fontSize, setFontSize] = useState('text-base');
 
-    // Mock user progress data
-    const [userProgress, setUserProgress] = useState({
-      xp: 1250,
-      streak: 7,
-      level: 12,
-      badges: ['quick-learner', 'streak-master', 'vocabulary-champion'],
-      wordsLearned: 342
-    });
+    // Initialize form data when userData changes
+    useEffect(() => {
+      if (userData) {
+        console.log('ProfileScreen - UserData loaded:', userData);
+        
+        setFormData({
+          displayName: userData.displayName || '',
+          email: userData.email || ''
+        });
+        setSettings(userData.settings || {
+          language: 'english',
+          fontSize: 'medium',
+          sound: true,
+          notifications: true,
+          theme: 'system'
+        });
+        setLearningLanguages(userData.learningLanguages || ['arabic']);
+        setBaseLanguage(userData.baseLanguage || 'english');
+        
+        // Update font size state for UI
+        const sizeMap = { small: 'text-sm', medium: 'text-base', large: 'text-lg' };
+        const fontSizeClass = sizeMap[userData.settings?.fontSize] || 'text-base';
+        setFontSize(fontSizeClass);
+      }
+    }, [userData]);
+
+    // User progress data from Firestore
+    const userProgress = userData ? {
+      xp: userData.xp || 0,
+      streak: userData.streak || 0,
+      level: userData.level || 1,
+      badges: userData.badges || [],
+      wordsLearned: userData.wordsLearned || 0
+    } : {
+      xp: 0,
+      streak: 0,
+      level: 1,
+      badges: [],
+      wordsLearned: 0
+    };
+
+    const showMessage = (type, text) => {
+      setMessage({ type, text });
+      setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+    };
+
+    const handleProfileUpdate = async (e) => {
+      e.preventDefault();
+      if (!formData.displayName.trim()) {
+        showMessage('error', 'Display name is required');
+        return;
+      }
+
+      setIsSaving(true);
+      try {
+        const result = await updateProfile(formData);
+        if (result.success) {
+          showMessage('success', 'Profile updated successfully');
+        } else {
+          showMessage('error', result.error || 'Failed to update profile');
+        }
+      } catch (error) {
+        showMessage('error', 'An error occurred while updating profile');
+      } finally {
+        setIsSaving(false);
+      }
+    };
+
+    const handleSettingsUpdate = async (newSettings) => {
+      setIsSaving(true);
+      try {
+        const result = await updateSettings(newSettings);
+        if (result.success) {
+          setSettings(newSettings);
+          showMessage('success', 'Settings updated successfully');
+        } else {
+          showMessage('error', result.error || 'Failed to update settings');
+        }
+      } catch (error) {
+        showMessage('error', 'An error occurred while updating settings');
+      } finally {
+        setIsSaving(false);
+      }
+    };
+
+    const handleLearningLanguagesUpdate = async (languages) => {
+      setIsSaving(true);
+      try {
+        const result = await updateLearningLanguages(languages);
+        if (result.success) {
+          setLearningLanguages(languages);
+          showMessage('success', 'Learning languages updated successfully');
+        } else {
+          showMessage('error', result.error || 'Failed to update learning languages');
+        }
+      } catch (error) {
+        showMessage('error', 'An error occurred while updating learning languages');
+      } finally {
+        setIsSaving(false);
+      }
+    };
+
+    const handleBaseLanguageUpdate = async (language) => {
+      setIsSaving(true);
+      try {
+        const result = await updateBaseLanguage(language);
+        if (result.success) {
+          setBaseLanguage(language);
+          showMessage('success', 'Base language updated successfully');
+        } else {
+          showMessage('error', result.error || 'Failed to update base language');
+        }
+      } catch (error) {
+        showMessage('error', 'An error occurred while updating base language');
+      } finally {
+        setIsSaving(false);
+      }
+    };
+
+    const handleLogout = async () => {
+      try {
+        await logout();
+      } catch (error) {
+        showMessage('error', 'Failed to logout');
+      }
+    };
 
     const INTERFACE_LANGUAGES = {
       en: { name: 'English', flag: '🇬🇧', rtl: false },
@@ -2404,77 +2761,83 @@ const LanguageLearningMVP = () => {
       { id: 'social-butterfly', name: 'Social Butterfly', description: 'Join the leaderboard', icon: Users, color: 'text-pink-400' }
     ];
 
-    // Load leaderboard data
-    useEffect(() => {
-      const loadLeaderboard = async () => {
-        setIsLoadingLeaderboard(true);
-        // Simulate API call
-        setTimeout(() => {
-          setLeaderboard([
-            { id: 1, displayName: 'Sarah Chen', level: 15, xp: 2340 },
-            { id: 2, displayName: 'Alex Rodriguez', level: 14, xp: 2180 },
-            { id: 3, displayName: 'You', level: 12, xp: 1250 },
-            { id: 4, displayName: 'Emma Wilson', level: 11, xp: 1120 },
-            { id: 5, displayName: 'Michael Brown', level: 10, xp: 980 }
-          ]);
-          setIsLoadingLeaderboard(false);
-        }, 1000);
-      };
-      loadLeaderboard();
-    }, []);
+    // Leaderboard data is now loaded automatically via UserContext
 
     const handleLanguageChange = async (type, language) => {
       if (type === 'base') {
-        setSelectedLanguage(language);
+        await handleBaseLanguageUpdate(language);
         const sizeMap = { small: 'text-sm', medium: 'text-base', large: 'text-lg' };
-        setFontSize(sizeMap[userSettings.fontSize]);
+        setFontSize(sizeMap[settings.fontSize]);
       } else {
-        if (learningLanguages.includes(language)) {
-          setLearningLanguages(learningLanguages.filter(l => l !== language));
-        } else {
-          setLearningLanguages([...learningLanguages, language]);
-        }
+        const newLanguages = learningLanguages.includes(language)
+          ? learningLanguages.filter(l => l !== language)
+          : [...learningLanguages, language];
+        await handleLearningLanguagesUpdate(newLanguages);
       }
     };
 
-    const handleSettingChange = (setting, value) => {
-      setUserSettings({ ...userSettings, [setting]: value });
+    const handleSettingChange = async (setting, value) => {
+      const newSettings = { ...settings, [setting]: value };
+      setSettings(newSettings);
+      
+      // Update font size state for UI
       if (setting === 'fontSize') {
         const sizeMap = { small: 'text-sm', medium: 'text-base', large: 'text-lg' };
-        setFontSize(sizeMap[value]);
+        const fontSizeClass = sizeMap[value];
+        setFontSize(fontSizeClass);
       }
+      
+      // Update settings in database and apply globally
+      await handleSettingsUpdate(newSettings);
     };
 
     const currentLanguage = INTERFACE_LANGUAGES[selectedLanguage];
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-3 sm:p-4 md:p-6 lg:p-8">
+      <div className="min-h-screen bg-gray-50 p-3 sm:p-4 md:p-6 lg:p-8">
         <div className="max-w-6xl mx-auto">
+          {/* Message Display */}
+          {message.text && (
+            <div className={`mb-6 p-4 rounded-lg flex items-center gap-3 ${
+              message.type === 'success' 
+                ? 'bg-green-900/30 border border-green-500/50 text-green-300' 
+                : 'bg-red-900/30 border border-red-500/50 text-red-300'
+            }`}>
+              {message.type === 'success' ? <Check size={20} /> : <X size={20} />}
+              {message.text}
+            </div>
+          )}
+
           {/* Header */}
-          <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="w-full sm:w-auto">
-              <h1 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-xl sm:text-2xl' : fontSize === 'text-base' ? 'text-2xl sm:text-3xl' : 'text-3xl sm:text-4xl'}`}>
-                Profile
-              </h1>
-              <p className="text-slate-400 mt-1 text-sm sm:text-base">Track your progress and customize your experience</p>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Profile</h1>
+              <p className="text-gray-600">Track your progress and customize your experience</p>
             </div>
            
-            <div className="flex items-center gap-3 sm:gap-4 self-end sm:self-auto">
+            <div className="flex items-center gap-4 self-end sm:self-auto">
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+              >
+                <LogOut size={18} />
+                Logout
+              </button>
                <GlobalLanguageToggle 
               className="w-40" 
               globalLanguage={globalLanguage}
               onLanguageChange={handleGlobalLanguageChange}
               compact={true}
             />
-              <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl sm:rounded-2xl flex items-center justify-center text-white text-lg sm:text-xl md:text-2xl font-bold shadow-lg">
-                M
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white text-lg font-bold shadow-lg">
+                {userData?.displayName?.charAt(0)?.toUpperCase() || 'U'}
               </div>
             </div>
           </div>
 
-          {/* Premium Tab Navigation */}
-          <div className="mb-6 sm:mb-8 bg-slate-800/50 backdrop-blur-lg rounded-xl sm:rounded-2xl p-1.5 sm:p-2 shadow-xl border border-slate-700/50">
-            <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+          {/* Tab Navigation */}
+          <div className="mb-8 bg-white rounded-2xl shadow-lg p-2">
+            <div className="grid grid-cols-3 gap-2">
               {[
                 { id: 'stats', label: 'Stats', icon: TrendingUp },
                 { id: 'settings', label: 'Settings', icon: Settings },
@@ -2483,13 +2846,14 @@ const LanguageLearningMVP = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-3 md:py-4 px-2 sm:px-4 md:px-6 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm md:text-base transition-all duration-300 ${activeTab === tab.id
-                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/30'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
-                    }`}
+                  className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-300 ${
+                    activeTab === tab.id
+                      ? 'bg-blue-600 text-white shadow-lg'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
                 >
-                  <tab.icon size={16} className="sm:w-5 sm:h-5" />
-                  <span className="hidden xs:inline sm:inline">{tab.label}</span>
+                  <tab.icon size={20} />
+                  <span>{tab.label}</span>
                 </button>
               ))}
             </div>
@@ -2499,23 +2863,21 @@ const LanguageLearningMVP = () => {
           {activeTab === 'stats' && (
             <div className="space-y-4 sm:space-y-6">
               {/* User Profile Card */}
-              <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-purple-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 text-white shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 sm:w-48 sm:h-48 md:w-64 md:h-64 bg-white/5 rounded-full -translate-y-16 sm:-translate-y-24 md:-translate-y-32 translate-x-16 sm:translate-x-24 md:translate-x-32" />
-                <div className="absolute bottom-0 left-0 w-24 h-24 sm:w-36 sm:h-36 md:w-48 md:h-48 bg-white/5 rounded-full translate-y-12 sm:translate-y-18 md:translate-y-24 -translate-x-12 sm:-translate-x-18 md:-translate-x-24" />
+              <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-purple-700 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-16 translate-x-16" />
+                <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-12 -translate-x-12" />
 
                 <div className="relative z-10">
-                  <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 mb-6 sm:mb-8">
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl sm:rounded-3xl flex items-center justify-center text-2xl sm:text-3xl font-bold shadow-xl">
-                      M
+                  <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 mb-8">
+                    <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center text-2xl font-bold shadow-xl">
+                      {userData?.displayName?.charAt(0)?.toUpperCase() || 'U'}
                     </div>
                     <div className="text-center sm:text-left flex-1">
-                      <h2 className={`font-bold mb-2 ${fontSize === 'text-sm' ? 'text-lg sm:text-xl' : fontSize === 'text-base' ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-3xl'}`}>
-                        Mohamed Ebrahim.
-                      </h2>
-                      <p className="text-blue-200 text-base sm:text-lg">Language Explorer</p>
+                      <h2 className="text-2xl font-bold mb-2">{userData?.displayName || 'User'}</h2>
+                      <p className="text-blue-200 text-lg">Language Explorer</p>
                       <div className="flex flex-wrap gap-2 mt-3 justify-center sm:justify-start">
                         {learningLanguages.map((lang) => (
-                          <span key={lang} className="px-2.5 sm:px-3 py-1 bg-white/20 backdrop-blur rounded-full text-xs sm:text-sm font-medium">
+                          <span key={lang} className="px-3 py-1 bg-white/20 backdrop-blur rounded-full text-sm font-medium">
                             {LEARNING_LANGUAGES[lang]?.flag} {LEARNING_LANGUAGES[lang]?.name}
                           </span>
                         ))}
@@ -2523,95 +2885,142 @@ const LanguageLearningMVP = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 md:gap-4">
-                    <div className="text-center p-3 sm:p-4 md:p-5 bg-white/10 backdrop-blur rounded-xl sm:rounded-2xl border border-white/10 hover:bg-white/15 transition-all">
-                      <Zap className="text-yellow-400 mx-auto mb-2 sm:mb-3" size={20} />
-                      <div className="text-xl sm:text-2xl md:text-3xl font-bold mb-1">{userProgress.xp}</div>
-                      <div className="text-xs sm:text-sm text-blue-200">Total XP</div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="text-center p-4 bg-white/10 backdrop-blur rounded-xl border border-white/10 hover:bg-white/15 transition-all">
+                      <Zap className="text-yellow-400 mx-auto mb-3" size={24} />
+                      <div className="text-2xl font-bold mb-1">{userProgress.xp}</div>
+                      <div className="text-sm text-blue-200">Total XP</div>
                     </div>
-                    <div className="text-center p-3 sm:p-4 md:p-5 bg-white/10 backdrop-blur rounded-xl sm:rounded-2xl border border-white/10 hover:bg-white/15 transition-all">
-                      <Flame className="text-orange-400 mx-auto mb-2 sm:mb-3" size={20} />
-                      <div className="text-xl sm:text-2xl md:text-3xl font-bold mb-1">{userProgress.streak}</div>
-                      <div className="text-xs sm:text-sm text-blue-200">Day Streak</div>
+                    <div className="text-center p-4 bg-white/10 backdrop-blur rounded-xl border border-white/10 hover:bg-white/15 transition-all">
+                      <Flame className="text-orange-400 mx-auto mb-3" size={24} />
+                      <div className="text-2xl font-bold mb-1">{userProgress.streak}</div>
+                      <div className="text-sm text-blue-200">Day Streak</div>
                     </div>
-                    <div className="text-center p-3 sm:p-4 md:p-5 bg-white/10 backdrop-blur rounded-xl sm:rounded-2xl border border-white/10 hover:bg-white/15 transition-all">
-                      <Trophy className="text-yellow-400 mx-auto mb-2 sm:mb-3" size={20} />
-                      <div className="text-xl sm:text-2xl md:text-3xl font-bold mb-1">{userProgress.level}</div>
-                      <div className="text-xs sm:text-sm text-blue-200">Level</div>
+                    <div className="text-center p-4 bg-white/10 backdrop-blur rounded-xl border border-white/10 hover:bg-white/15 transition-all">
+                      <Trophy className="text-yellow-400 mx-auto mb-3" size={24} />
+                      <div className="text-2xl font-bold mb-1">{userProgress.level}</div>
+                      <div className="text-sm text-blue-200">Level</div>
                     </div>
-                    <div className="text-center p-3 sm:p-4 md:p-5 bg-white/10 backdrop-blur rounded-xl sm:rounded-2xl border border-white/10 hover:bg-white/15 transition-all">
-                      <Award className="text-purple-400 mx-auto mb-2 sm:mb-3" size={20} />
-                      <div className="text-xl sm:text-2xl md:text-3xl font-bold mb-1">{userProgress.badges.length}</div>
-                      <div className="text-xs sm:text-sm text-blue-200">Badges</div>
+                    <div className="text-center p-4 bg-white/10 backdrop-blur rounded-xl border border-white/10 hover:bg-white/15 transition-all">
+                      <Award className="text-purple-400 mx-auto mb-3" size={24} />
+                      <div className="text-2xl font-bold mb-1">{userProgress.badges.length}</div>
+                      <div className="text-sm text-blue-200">Badges</div>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Learning Stats */}
-              <div className="bg-slate-800/70 backdrop-blur-lg rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-xl border border-slate-700/50">
-                <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-                  <TrendingUp className="text-blue-400" size={20} />
-                  <h3 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-lg sm:text-xl' : fontSize === 'text-base' ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-3xl'}`}>
-                    Learning Stats
-                  </h3>
+              <div className="bg-white rounded-2xl shadow-lg p-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <TrendingUp className="text-blue-600" size={24} />
+                  <h3 className="text-xl font-bold text-gray-900">Learning Stats</h3>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
-                  <div className="text-center">
-                    <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2">{userProgress.xp}</div>
-                    <div className="text-slate-400 text-xs sm:text-sm">Total XP</div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+                  <div className="text-center p-4 bg-blue-50 rounded-xl">
+                    <div className="text-3xl font-bold text-blue-600 mb-2">{userProgress.xp}</div>
+                    <div className="text-sm text-gray-600">Total XP</div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2">{userProgress.streak}</div>
-                    <div className="text-slate-400 text-xs sm:text-sm">Day Streak</div>
+                  <div className="text-center p-4 bg-orange-50 rounded-xl">
+                    <div className="text-3xl font-bold text-orange-600 mb-2">{userProgress.streak}</div>
+                    <div className="text-sm text-gray-600">Day Streak</div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2">{userProgress.wordsLearned}</div>
-                    <div className="text-slate-400 text-xs sm:text-sm">Words Learned</div>
+                  <div className="text-center p-4 bg-green-50 rounded-xl">
+                    <div className="text-3xl font-bold text-green-600 mb-2">{userProgress.wordsLearned}</div>
+                    <div className="text-sm text-gray-600">Words Learned</div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2">{userProgress.level}</div>
-                    <div className="text-slate-400 text-xs sm:text-sm">Level</div>
+                  <div className="text-center p-4 bg-purple-50 rounded-xl">
+                    <div className="text-3xl font-bold text-purple-600 mb-2">{userProgress.level}</div>
+                    <div className="text-sm text-gray-600">Level</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Learning Progress */}
+              <div className="bg-white rounded-2xl shadow-lg p-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <Target className="text-green-600" size={24} />
+                  <h3 className="text-xl font-bold text-gray-900">Learning Progress</h3>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-gray-700 font-medium">Current Level Progress</span>
+                      <span className="text-gray-600 text-sm">{userProgress.xp} / {(userProgress.level + 1) * 100} XP</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div 
+                        className="bg-gradient-to-r from-blue-500 to-purple-600 h-3 rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min((userProgress.xp % 100) / 100 * 100, 100)}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-gray-700 font-medium">Weekly Goal</span>
+                      <span className="text-gray-600 text-sm">7 / 7 days</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div 
+                        className="bg-gradient-to-r from-green-500 to-emerald-600 h-3 rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min((userProgress.streak / 7) * 100, 100)}%` }}
+                      ></div>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Achievements */}
-              <div className="bg-slate-800/70 backdrop-blur-lg rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-xl border border-slate-700/50">
-                <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-                  <Award className="text-yellow-400" size={20} />
-                  <h3 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-lg sm:text-xl' : fontSize === 'text-base' ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-3xl'}`}>
-                    Achievements
-                  </h3>
+              <div className="bg-white rounded-2xl shadow-lg p-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <Award className="text-yellow-500" size={24} />
+                  <h3 className="text-xl font-bold text-gray-900">Achievements</h3>
                 </div>
-                <div className="grid gap-3 sm:gap-4">
+                <div className="grid gap-4">
                   {ACHIEVEMENTS.map((achievement) => {
                     const isUnlocked = userProgress.badges.includes(achievement.id);
                     const Icon = achievement.icon;
                     return (
                       <div
                         key={achievement.id}
-                        className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-2xl border-2 transition-all ${isUnlocked
-                            ? 'bg-gradient-to-r from-slate-700/50 to-slate-600/30 border-blue-500/50 shadow-lg shadow-blue-500/10'
-                            : 'bg-slate-700/30 border-slate-600/30 opacity-60'
-                          }`}
+                        className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
+                          isUnlocked
+                            ? 'bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200 shadow-md'
+                            : 'bg-gray-50 border-gray-200 opacity-60'
+                        }`}
                       >
-                        <div className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-lg sm:rounded-xl flex items-center justify-center ${isUnlocked ? 'bg-gradient-to-br from-blue-500 to-purple-600' : 'bg-slate-600'}`}>
-                          <Icon className={isUnlocked ? achievement.color : 'text-slate-400'} size={20} />
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                          isUnlocked 
+                            ? 'bg-gradient-to-br from-blue-500 to-purple-600' 
+                            : 'bg-gray-300'
+                        }`}>
+                          <Icon className={isUnlocked ? 'text-white' : 'text-gray-500'} size={24} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-white text-sm sm:text-base md:text-lg truncate">{achievement.name}</div>
-                          <div className="text-slate-400 text-xs sm:text-sm line-clamp-1">{achievement.description}</div>
+                          <div className={`font-semibold text-lg truncate ${
+                            isUnlocked ? 'text-gray-900' : 'text-gray-500'
+                          }`}>
+                            {achievement.name}
+                          </div>
+                          <div className={`text-sm ${
+                            isUnlocked ? 'text-gray-600' : 'text-gray-400'
+                          }`}>
+                            {achievement.description}
+                          </div>
                         </div>
                         {isUnlocked && (
-                          <Check className="text-green-400 flex-shrink-0" size={20} />
+                          <Check className="text-green-500 flex-shrink-0" size={24} />
                         )}
                       </div>
                     );
                   })}
                 </div>
                 {userProgress.badges.length === 0 && (
-                  <p className="text-slate-400 text-center py-6 sm:py-8 text-sm sm:text-base">No achievements yet. Keep learning to unlock them!</p>
+                  <div className="text-center py-8">
+                    <Award className="mx-auto text-gray-300 mb-4" size={48} />
+                    <p className="text-gray-500 text-lg">No achievements yet</p>
+                    <p className="text-gray-400 text-sm">Keep learning to unlock them!</p>
+                  </div>
                 )}
               </div>
             </div>
@@ -2620,60 +3029,146 @@ const LanguageLearningMVP = () => {
           {/* Settings Tab */}
           {activeTab === 'settings' && (
             <div className="space-y-4 sm:space-y-6">
-              {/* Language Settings */}
-              <div className="bg-slate-800/70 backdrop-blur-lg rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-xl border border-slate-700/50">
-                <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-                  <Globe className="text-blue-400" size={20} />
-                  <h3 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-lg sm:text-xl' : fontSize === 'text-base' ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-3xl'}`}>
-                    Interface Language
-                  </h3>
+              {/* Account Info Section */}
+              <div className="bg-white rounded-2xl shadow-lg p-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <User className="text-blue-600" size={24} />
+                  <h3 className="text-xl font-bold text-gray-900">Account Information</h3>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3 md:gap-4">
+
+                <form onSubmit={handleProfileUpdate} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Display Name
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.displayName}
+                      onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Enter your display name"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Enter your email"
+                      required
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSaving || isUpdating}
+                    className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSaving || isUpdating ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Save size={18} />
+                    )}
+                    {isSaving || isUpdating ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </form>
+              </div>
+
+              {/* Language Settings */}
+              <div className="bg-white rounded-2xl shadow-lg p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <Globe className="text-blue-600" size={24} />
+                    <h3 className="text-xl font-bold text-gray-900">Language Settings</h3>
+                </div>
+                  <button className="text-blue-600 font-medium hover:text-blue-700">
+                    Edit
+                  </button>
+                </div>
+                
+                {/* Profile Information */}
+                <div className="space-y-4 mb-6">
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-gray-600">Display Name:</span>
+                    <span className="text-gray-900 font-medium">{userData?.displayName || 'Not set'}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-gray-600">Country/Region:</span>
+                    <span className="text-gray-900 font-medium">Not set</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-gray-600">Learning Language:</span>
+                    <span className="text-gray-900 font-medium">
+                      {learningLanguages.length > 0 
+                        ? learningLanguages.map(lang => LEARNING_LANGUAGES[lang]?.name).join(', ')
+                        : 'Not set'
+                      }
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-gray-600">CEFR Level:</span>
+                    <span className="text-gray-900 font-medium">Not set</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-gray-600">Native Language:</span>
+                    <span className="text-gray-900 font-medium">Not set</span>
+                  </div>
+                </div>
+
+                {/* Interface Language */}
+                <div className="mb-6">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4">Interface Language</h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                   {Object.entries(INTERFACE_LANGUAGES).map(([key, lang]) => (
                     <button
                       key={key}
                       onClick={() => handleLanguageChange('base', key)}
-                      className={`p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-2xl border-2 transition-all duration-300 ${selectedLanguage === key
-                          ? 'border-blue-500 bg-gradient-to-br from-blue-500/20 to-purple-500/20 shadow-lg shadow-blue-500/20'
-                          : 'border-slate-600 bg-slate-700/30 hover:border-slate-500 hover:bg-slate-700/50'
+                        disabled={isSaving || isUpdating}
+                        className={`p-4 rounded-xl border-2 transition-all duration-300 flex flex-col items-center ${
+                          baseLanguage === key
+                            ? 'border-green-500 bg-green-50 text-green-700'
+                            : 'border-gray-200 bg-white hover:border-gray-300 text-gray-700'
                         }`}
-                    >
-                      <div className="text-2xl sm:text-3xl md:text-4xl mb-2 sm:mb-3">{lang.flag}</div>
-                      <div className={`font-semibold text-xs sm:text-sm truncate ${selectedLanguage === key ? 'text-blue-300' : 'text-slate-300'}`}>
-                        {lang.name}
-                      </div>
-                      {selectedLanguage === key && (
-                        <Check className="text-blue-400 mx-auto mt-2" size={16} />
+                      >
+                        <div className="text-3xl mb-2">{lang.flag}</div>
+                        <div className="font-medium text-sm text-center">{lang.name}</div>
+                        {baseLanguage === key && (
+                          <Check className="text-green-600 mt-1" size={16} />
                       )}
                     </button>
                   ))}
+                  </div>
                 </div>
               </div>
 
               {/* Learning Languages */}
-              <div className="bg-slate-800/70 backdrop-blur-lg rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-xl border border-slate-700/50">
-                <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-                  <Globe className="text-purple-400" size={20} />
-                  <h3 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-lg sm:text-xl' : fontSize === 'text-base' ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-3xl'}`}>
-                    Learning Languages
-                  </h3>
+              <div className="bg-white rounded-2xl shadow-lg p-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <Globe className="text-purple-600" size={24} />
+                  <h3 className="text-xl font-bold text-gray-900">Learning Languages</h3>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3 md:gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                   {Object.entries(LEARNING_LANGUAGES).map(([key, lang]) => (
                     <button
                       key={key}
                       onClick={() => handleLanguageChange('learning', key)}
-                      className={`p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-2xl border-2 transition-all duration-300 ${learningLanguages.includes(key)
-                          ? 'border-purple-500 bg-gradient-to-br from-purple-500/20 to-pink-500/20 shadow-lg shadow-purple-500/20'
-                          : 'border-slate-600 bg-slate-700/30 hover:border-slate-500 hover:bg-slate-700/50'
-                        }`}
+                      disabled={isSaving || isUpdating}
+                      className={`p-4 rounded-xl border-2 transition-all duration-300 flex flex-col items-center ${
+                        learningLanguages.includes(key)
+                          ? 'border-purple-500 bg-purple-50 text-purple-700'
+                          : 'border-gray-200 bg-white hover:border-gray-300 text-gray-700'
+                      }`}
                     >
-                      <div className="text-2xl sm:text-3xl md:text-4xl mb-2 sm:mb-3">{lang.flag}</div>
-                      <div className={`font-semibold text-xs sm:text-sm truncate ${learningLanguages.includes(key) ? 'text-purple-300' : 'text-slate-300'}`}>
-                        {lang.name}
-                      </div>
+                      <div className="text-3xl mb-2">{lang.flag}</div>
+                      <div className="font-medium text-sm text-center">{lang.name}</div>
                       {learningLanguages.includes(key) && (
-                        <Check className="text-purple-400 mx-auto mt-2" size={16} />
+                        <Check className="text-purple-600 mt-1" size={16} />
                       )}
                     </button>
                   ))}
@@ -2681,93 +3176,266 @@ const LanguageLearningMVP = () => {
               </div>
 
               {/* App Settings */}
-              <div className="bg-slate-800/70 backdrop-blur-lg rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-xl border border-slate-700/50">
-                <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-                  <Settings className="text-green-400" size={20} />
-                  <h3 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-lg sm:text-xl' : fontSize === 'text-base' ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-3xl'}`}>
-                    App Settings
-                  </h3>
+              <div className="bg-white rounded-2xl shadow-lg p-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <Settings className="text-green-600" size={24} />
+                  <h3 className="text-xl font-bold text-gray-900">App Settings</h3>
                 </div>
-                <div className="space-y-3 sm:space-y-4 md:space-y-5">
-                  {/* Dark Mode */}
-                  <div className="flex items-center justify-between p-3 sm:p-4 md:p-5 bg-slate-700/30 rounded-xl sm:rounded-2xl hover:bg-slate-700/50 transition-all">
-                    <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
-                      {userSettings.darkMode ? <Moon size={20} className="text-blue-400 flex-shrink-0" /> : <Sun size={20} className="text-yellow-400 flex-shrink-0" />}
-                      <div className="min-w-0">
-                        <div className="font-semibold text-white text-sm sm:text-base md:text-lg truncate">Dark Mode</div>
-                        <div className="text-xs sm:text-sm text-slate-400 truncate">Toggle dark/light theme</div>
-                      </div>
-                    </div>
+                
+                <div className="space-y-6">
+                  {/* Theme Settings */}
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Theme</h4>
+                    <div className="grid grid-cols-3 gap-3">
+                      {[
+                        { value: 'light', label: 'Light', icon: Sun },
+                        { value: 'dark', label: 'Dark', icon: Moon },
+                        { value: 'system', label: 'System', icon: Monitor }
+                      ].map((option) => {
+                        const Icon = option.icon;
+                        return (
                     <button
-                      onClick={() => handleSettingChange('darkMode', !userSettings.darkMode)}
-                      className={`w-12 h-6 sm:w-14 sm:h-7 md:w-16 md:h-8 rounded-full transition-all duration-300 relative flex-shrink-0 ml-3 ${userSettings.darkMode ? 'bg-blue-600' : 'bg-slate-600'
-                        }`}
-                    >
-                      <div
-                        className={`w-5 h-5 sm:w-5 sm:h-5 md:w-6 md:h-6 bg-white rounded-full shadow-lg transition-transform duration-300 absolute top-0.5 ${userSettings.darkMode ? 'translate-x-6 sm:translate-x-7 md:translate-x-9' : 'translate-x-1'
-                          }`}
-                      />
+                            key={option.value}
+                            onClick={() => handleSettingChange('theme', option.value)}
+                            disabled={isSaving || isUpdating}
+                            className={`flex items-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all duration-300 ${
+                              settings.theme === option.value
+                                ? 'bg-blue-600 text-white shadow-lg'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                          >
+                            <Icon size={18} />
+                            {option.label}
                     </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   {/* Notifications */}
-                  <div className="flex items-center justify-between p-3 sm:p-4 md:p-5 bg-slate-700/30 rounded-xl sm:rounded-2xl hover:bg-slate-700/50 transition-all">
-                    <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
-                      <Bell size={20} className="text-orange-400 flex-shrink-0" />
-                      <div className="min-w-0">
-                        <div className="font-semibold text-white text-sm sm:text-base md:text-lg truncate">Notifications</div>
-                        <div className="text-xs sm:text-sm text-slate-400 truncate">Enable push notifications</div>
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <Bell size={20} className="text-orange-500" />
+                      <div>
+                        <div className="font-semibold text-gray-900">Notifications</div>
+                        <div className="text-sm text-gray-600">Enable push notifications</div>
                       </div>
                     </div>
                     <button
-                      onClick={() => handleSettingChange('notifications', !userSettings.notifications)}
-                      className={`w-12 h-6 sm:w-14 sm:h-7 md:w-16 md:h-8 rounded-full transition-all duration-300 relative flex-shrink-0 ml-3 ${userSettings.notifications ? 'bg-blue-600' : 'bg-slate-600'
+                      onClick={() => handleSettingChange('notifications', !settings.notifications)}
+                      disabled={isSaving || isUpdating}
+                      className={`w-12 h-6 rounded-full transition-all duration-300 relative ${
+                        settings.notifications ? 'bg-blue-600' : 'bg-gray-300'
                         }`}
                     >
                       <div
-                        className={`w-5 h-5 sm:w-5 sm:h-5 md:w-6 md:h-6 bg-white rounded-full shadow-lg transition-transform duration-300 absolute top-0.5 ${userSettings.notifications ? 'translate-x-6 sm:translate-x-7 md:translate-x-9' : 'translate-x-1'
+                        className={`w-5 h-5 bg-white rounded-full shadow-lg transition-transform duration-300 absolute top-0.5 ${
+                          settings.notifications ? 'translate-x-6' : 'translate-x-1'
                           }`}
                       />
                     </button>
                   </div>
 
                   {/* Sound */}
-                  <div className="flex items-center justify-between p-3 sm:p-4 md:p-5 bg-slate-700/30 rounded-xl sm:rounded-2xl hover:bg-slate-700/50 transition-all">
-                    <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
-                      <Volume2 size={20} className="text-purple-400 flex-shrink-0" />
-                      <div className="min-w-0">
-                        <div className="font-semibold text-white text-sm sm:text-base md:text-lg truncate">Sound</div>
-                        <div className="text-xs sm:text-sm text-slate-400 truncate">Enable audio feedback</div>
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <Volume2 size={20} className="text-purple-500" />
+                      <div>
+                        <div className="font-semibold text-gray-900">Sound</div>
+                        <div className="text-sm text-gray-600">Enable audio feedback</div>
                       </div>
                     </div>
                     <button
-                      onClick={() => handleSettingChange('sound', !userSettings.sound)}
-                      className={`w-12 h-6 sm:w-14 sm:h-7 md:w-16 md:h-8 rounded-full transition-all duration-300 relative flex-shrink-0 ml-3 ${userSettings.sound ? 'bg-blue-600' : 'bg-slate-600'
+                      onClick={() => handleSettingChange('sound', !settings.sound)}
+                      disabled={isSaving || isUpdating}
+                      className={`w-12 h-6 rounded-full transition-all duration-300 relative ${
+                        settings.sound ? 'bg-blue-600' : 'bg-gray-300'
                         }`}
                     >
                       <div
-                        className={`w-5 h-5 sm:w-5 sm:h-5 md:w-6 md:h-6 bg-white rounded-full shadow-lg transition-transform duration-300 absolute top-0.5 ${userSettings.sound ? 'translate-x-6 sm:translate-x-7 md:translate-x-9' : 'translate-x-1'
+                        className={`w-5 h-5 bg-white rounded-full shadow-lg transition-transform duration-300 absolute top-0.5 ${
+                          settings.sound ? 'translate-x-6' : 'translate-x-1'
                           }`}
                       />
                     </button>
                   </div>
 
                   {/* Font Size */}
-                  <div className="p-3 sm:p-4 md:p-5 bg-slate-700/30 rounded-xl sm:rounded-2xl">
-                    <div className="font-semibold text-white text-sm sm:text-base md:text-lg mb-3 sm:mb-4">Font Size</div>
-                    <div className="flex gap-2 sm:gap-3">
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Font Size</h4>
+                    <div className="flex gap-3">
                       {['small', 'medium', 'large'].map((size) => (
                         <button
                           key={size}
                           onClick={() => handleSettingChange('fontSize', size)}
-                          className={`flex-1 px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm md:text-base transition-all duration-300 ${userSettings.fontSize === size
-                              ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
-                              : 'bg-slate-600/50 text-slate-300 hover:bg-slate-600'
-                            }`}
+                          disabled={isSaving || isUpdating}
+                          className={`flex-1 px-4 py-3 rounded-xl font-semibold transition-all duration-300 ${
+                            settings.fontSize === size
+                              ? 'bg-blue-600 text-white shadow-lg'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
                         >
                           {size.charAt(0).toUpperCase() + size.slice(1)}
                         </button>
                       ))}
+                    </div>
+                  </div>
+
+                  {/* Notification Settings */}
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Notification Settings</h4>
+                    <div className="space-y-4">
+                      {/* Learning Reminders */}
+                      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                        <div className="flex items-center gap-3">
+                          <Bell size={20} className="text-blue-500" />
+                          <div>
+                            <div className="font-semibold text-gray-900">Learning Reminders</div>
+                            <div className="text-sm text-gray-600">Daily learning session reminders</div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            if (notificationService.getPermissionStatus() === 'granted') {
+                              notificationService.sendLearningReminder();
+                              trackNotification('learningReminders');
+                            } else {
+                              const granted = await notificationService.requestPermission();
+                              setNotificationPermission(notificationService.getPermissionStatus());
+                              if (granted) {
+                                notificationService.sendLearningReminder();
+                                trackNotification('learningReminders');
+                              }
+                            }
+                          }}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                        >
+                          Test
+                        </button>
+                      </div>
+
+                      {/* Live Session Alerts */}
+                      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                        <div className="flex items-center gap-3">
+                          <Volume2 size={20} className="text-green-500" />
+                          <div>
+                            <div className="font-semibold text-gray-900">Live Session Alerts</div>
+                            <div className="text-sm text-gray-600">Notifications for live learning sessions</div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            if (notificationService.getPermissionStatus() === 'granted') {
+                              notificationService.sendLiveSessionNotification({
+                                teacher: 'Ms. Sarah',
+                                language: 'Arabic & English'
+                              });
+                              trackNotification('liveSessions');
+                            } else {
+                              const granted = await notificationService.requestPermission();
+                              setNotificationPermission(notificationService.getPermissionStatus());
+                              if (granted) {
+                                notificationService.sendLiveSessionNotification({
+                                  teacher: 'Ms. Sarah',
+                                  language: 'Arabic & English'
+                                });
+                                trackNotification('liveSessions');
+                              }
+                            }
+                          }}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                        >
+                          Test
+                        </button>
+                      </div>
+
+                      {/* Achievement Notifications */}
+                      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                        <div className="flex items-center gap-3">
+                          <Award size={20} className="text-yellow-500" />
+                          <div>
+                            <div className="font-semibold text-gray-900">Achievement Notifications</div>
+                            <div className="text-sm text-gray-600">Celebrate your learning milestones</div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            if (notificationService.getPermissionStatus() === 'granted') {
+                              notificationService.sendAchievementNotification({
+                                name: 'First Steps',
+                                description: 'Complete your first lesson'
+                              });
+                              trackNotification('achievements');
+                            } else {
+                              const granted = await notificationService.requestPermission();
+                              setNotificationPermission(notificationService.getPermissionStatus());
+                              if (granted) {
+                                notificationService.sendAchievementNotification({
+                                  name: 'First Steps',
+                                  description: 'Complete your first lesson'
+                                });
+                                trackNotification('achievements');
+                              }
+                            }
+                          }}
+                          className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm font-medium"
+                        >
+                          Test
+                        </button>
+                      </div>
+
+                      {/* Notification Statistics */}
+                      <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-200">
+                        <div className="flex items-center justify-between mb-4">
+                          <h5 className="font-semibold text-gray-900">Notification Statistics</h5>
+                          <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                            {notificationStats.total} Total
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="text-center p-3 bg-white rounded-lg">
+                            <div className="text-2xl font-bold text-blue-600">{notificationStats.learningReminders}</div>
+                            <div className="text-xs text-gray-600">Learning Reminders</div>
+                          </div>
+                          <div className="text-center p-3 bg-white rounded-lg">
+                            <div className="text-2xl font-bold text-green-600">{notificationStats.liveSessions}</div>
+                            <div className="text-xs text-gray-600">Live Sessions</div>
+                          </div>
+                          <div className="text-center p-3 bg-white rounded-lg">
+                            <div className="text-2xl font-bold text-yellow-600">{notificationStats.achievements}</div>
+                            <div className="text-xs text-gray-600">Achievements</div>
+                          </div>
+                          <div className="text-center p-3 bg-white rounded-lg">
+                            <div className="text-2xl font-bold text-purple-600">{notificationStats.progress}</div>
+                            <div className="text-xs text-gray-600">Progress Updates</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Notification Permission Status */}
+                      <div className="p-4 bg-gray-50 rounded-xl">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-semibold text-gray-900">Permission Status</span>
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            notificationPermission === 'granted' 
+                              ? 'bg-green-100 text-green-800' 
+                              : notificationPermission === 'denied'
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {notificationPermission === 'granted' ? 'Enabled' : 
+                             notificationPermission === 'denied' ? 'Disabled' : 'Not Set'}
+                          </span>
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {notificationPermission === 'granted' 
+                            ? 'Notifications are enabled. You\'ll receive learning reminders and updates.'
+                            : notificationPermission === 'denied'
+                            ? 'Notifications are disabled. Enable them in your browser settings to get learning reminders.'
+                            : 'Click "Enable" above to allow notifications for learning reminders and updates.'
+                          }
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2777,56 +3445,61 @@ const LanguageLearningMVP = () => {
 
           {/* Leaderboard Tab */}
           {activeTab === 'leaderboard' && (
-            <div className="bg-slate-800/70 backdrop-blur-lg rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-xl border border-slate-700/50">
-              <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-                <Trophy className="text-yellow-400" size={20} />
-                <h3 className={`font-bold text-white ${fontSize === 'text-sm' ? 'text-lg sm:text-xl' : fontSize === 'text-base' ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-3xl'}`}>
-                  Weekly Leaderboard
-                </h3>
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <Trophy className="text-yellow-500" size={24} />
+                <h3 className="text-xl font-bold text-gray-900">Live Leaderboard</h3>
               </div>
-              {isLoadingLeaderboard ? (
-                <div className="text-center py-8 sm:py-12">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 border-3 sm:border-4 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-3 sm:mb-4" />
-                  <p className="text-slate-400 text-sm sm:text-base md:text-lg">Loading leaderboard...</p>
-                </div>
-              ) : leaderboard.length > 0 ? (
-                <div className="space-y-2.5 sm:space-y-3 md:space-y-4">
+              {leaderboard.length > 0 ? (
+                <div className="space-y-3">
                   {leaderboard.map((user, index) => (
                     <div
                       key={user.id}
-                      className={`flex items-center gap-3 sm:gap-4 md:gap-5 p-3 sm:p-4 md:p-6 rounded-xl sm:rounded-2xl transition-all ${user.displayName === 'You'
-                          ? 'bg-gradient-to-r from-blue-600/30 to-purple-600/30 border-2 border-blue-500/50 shadow-lg shadow-blue-500/20'
-                          : 'bg-slate-700/40 hover:bg-slate-700/60'
+                      className={`flex items-center gap-4 p-4 rounded-xl transition-all ${
+                        user.id === user?.uid
+                          ? 'bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 shadow-md'
+                          : 'bg-gray-50 hover:bg-gray-100'
                         }`}
                     >
                       <div
-                        className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center text-white font-bold text-sm sm:text-base md:text-lg shadow-lg ${index === 0
+                        className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg ${
+                          index === 0
                             ? 'bg-gradient-to-br from-yellow-400 to-orange-500'
                             : index === 1
                               ? 'bg-gradient-to-br from-gray-300 to-gray-500'
                               : index === 2
                                 ? 'bg-gradient-to-br from-orange-400 to-orange-600'
-                                : 'bg-slate-600'
+                                : 'bg-gray-400'
                           }`}
                       >
                         {index + 1}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-white text-sm sm:text-base md:text-lg truncate">{user.displayName || 'Anonymous'}</div>
-                        <div className="text-slate-400 text-xs sm:text-sm">Level {user.level || 1}</div>
+                        <div className="font-semibold text-gray-900 text-lg truncate">
+                          {user.displayName || 'Anonymous'}
+                        </div>
+                        <div className="text-gray-600 text-sm">Level {user.level || 1}</div>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <div className="text-yellow-400 font-bold text-base sm:text-lg md:text-xl">{user.xp || 0}</div>
-                        <div className="text-slate-400 text-xs sm:text-sm">XP</div>
+                        <div className="text-yellow-500 font-bold text-xl">{user.xp || 0}</div>
+                        <div className="text-gray-600 text-sm">XP</div>
                       </div>
                       {index < 3 && (
-                        <Trophy className={`flex-shrink-0 ${index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-400' : 'text-orange-400'}`} size={20} />
+                        <Trophy className={`flex-shrink-0 ${
+                          index === 0 ? 'text-yellow-500' : 
+                          index === 1 ? 'text-gray-400' : 
+                          'text-orange-500'
+                        }`} size={24} />
                       )}
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-slate-400 text-center py-8 sm:py-12 text-sm sm:text-base md:text-lg">No data available yet.</p>
+                <div className="text-center py-8">
+                  <Trophy className="mx-auto text-gray-300 mb-4" size={48} />
+                  <p className="text-gray-500 text-lg">No data available yet</p>
+                  <p className="text-gray-400 text-sm">Start learning to appear on the leaderboard!</p>
+                </div>
               )}
             </div>
           )}
@@ -3258,7 +3931,27 @@ const LanguageLearningMVP = () => {
 
           <div className="space-y-4">
             <button
-              onClick={() => setIsLiveSession(!isLiveSession)}
+              onClick={() => {
+                const newSessionState = !isLiveSession;
+                setIsLiveSession(newSessionState);
+                
+            // Send notification for live session status
+            if (notificationService.getPermissionStatus() === 'granted') {
+              if (newSessionState) {
+                notificationService.sendLiveSessionNotification({
+                  teacher: 'Ms. Sarah',
+                  language: 'Arabic & English'
+                });
+                trackNotification('liveSessions');
+              } else {
+                notificationService.sendNotification('Live Session Ended', {
+                  body: 'Your live learning session has ended. Great work today!',
+                  requireInteraction: false
+                });
+                trackNotification('progress');
+              }
+            }
+              }}
               className={`w-full p-4 rounded-xl font-medium transition-all focus:outline-none focus:ring-2 focus:ring-white ${isLiveSession ? 'bg-red-600 hover:bg-red-500 text-white' : 'bg-green-600 hover:bg-green-500 text-white'
                 }`}
             >
@@ -3626,24 +4319,99 @@ const LanguageLearningMVP = () => {
       <NavigationBar t={t} />
 
       {/* PWA Install Prompt */}
-      {showInstallPrompt && (
+      {showInstallPrompt && !isInstalled && (
         <div className="fixed bottom-20 left-4 right-4 w-full mx-auto z-40">
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 rounded-xl shadow-lg flex items-center justify-between">
-            <div>
-              <p className="font-medium text-sm">Install LinguaAI</p>
-              <p className="text-xs text-blue-100">Get offline access & notifications</p>
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 rounded-xl shadow-lg">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="font-medium text-sm">Install LinguaAI</p>
+                <p className="text-xs text-blue-100">
+                  Get offline access, live notifications & faster loading
+                  {notificationCount > 0 && (
+                    <span className="ml-2 px-2 py-1 bg-white/20 rounded-full text-xs font-medium">
+                      {notificationCount} notifications sent
+                    </span>
+                  )}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowInstallPrompt(false)}
+                className="text-blue-100 hover:text-white transition-colors p-1 focus:outline-none focus:ring-2 focus:ring-white rounded"
+                aria-label="Dismiss install prompt"
+              >
+                ✕
+              </button>
             </div>
             <div className="flex space-x-2">
               <button
                 onClick={handleInstallClick}
-                className="bg-white text-blue-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors focus:outline-none focus:ring-2 focus:ring-white"
+                className="flex-1 bg-white text-blue-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors focus:outline-none focus:ring-2 focus:ring-white"
               >
-                Install
+                {deferredPrompt ? 'Install App' : 'Install Guide'}
+              </button>
+              {!deferredPrompt && (
+                <button
+                  onClick={() => {
+                    const userAgent = navigator.userAgent;
+                    let instructions = '';
+                    
+                    if (userAgent.includes('Chrome')) {
+                      instructions = 'Chrome: Click the install icon (⬇️) in the address bar, or go to Menu (⋮) → "Install LinguaAI"';
+                    } else if (userAgent.includes('Firefox')) {
+                      instructions = 'Firefox: Click the install icon (⬇️) in the address bar, or go to Menu (☰) → "Install"';
+                    } else if (userAgent.includes('Safari')) {
+                      instructions = 'Safari: Click Share (↗️) → "Add to Home Screen"';
+                    } else if (userAgent.includes('Edge')) {
+                      instructions = 'Edge: Click the install icon (⬇️) in the address bar, or go to Menu (⋯) → "Apps" → "Install this site as an app"';
+                    } else {
+                      instructions = 'Look for an install option in your browser menu or address bar';
+                    }
+                    
+                    alert(instructions);
+                  }}
+                  className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-400 transition-colors focus:outline-none focus:ring-2 focus:ring-white"
+                >
+                  Help
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notification Permission Prompt */}
+      {notificationPermission === 'default' && (
+        <div className="fixed bottom-20 left-4 right-4 w-full mx-auto z-40">
+          <div className="bg-gradient-to-r from-green-600 to-blue-600 text-white p-4 rounded-xl shadow-lg flex items-center justify-between">
+            <div>
+              <p className="font-medium text-sm">Enable Notifications</p>
+              <p className="text-xs text-green-100">
+                Get learning reminders & live session alerts
+                {notificationCount > 0 && (
+                  <span className="ml-2 px-2 py-1 bg-white/20 rounded-full text-xs font-medium">
+                    {notificationCount} sent
+                  </span>
+                )}
+              </p>
+            </div>
+            <div className="flex space-x-2">
+              <button
+                onClick={async () => {
+                  const granted = await notificationService.requestPermission();
+                  setNotificationPermission(notificationService.getPermissionStatus());
+                  if (granted) {
+                    await notificationService.setupPushNotifications();
+                    notificationService.scheduleLearningReminders();
+                  }
+                }}
+                className="bg-white text-green-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-50 transition-colors focus:outline-none focus:ring-2 focus:ring-white"
+              >
+                Enable
               </button>
               <button
-                onClick={() => setShowInstallPrompt(false)}
-                className="text-blue-100 hover:text-white transition-colors p-2 focus:outline-none focus:ring-2 focus:ring-white rounded"
-                aria-label="Dismiss install prompt"
+                onClick={() => setNotificationPermission('denied')}
+                className="text-green-100 hover:text-white transition-colors p-2 focus:outline-none focus:ring-2 focus:ring-white rounded"
+                aria-label="Dismiss notification prompt"
               >
                 ✕
               </button>

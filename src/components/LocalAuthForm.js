@@ -337,3 +337,4 @@ const styles = {
 
 export default LocalAuthForm;
 
+

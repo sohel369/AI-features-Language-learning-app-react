@@ -1,10 +1,37 @@
-import { auth } from '../firebase/config';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
+import { auth, db } from '../firebase/config';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile as firebaseUpdateProfile } from "firebase/auth";
+import { doc, setDoc, getDoc, updateDoc, onSnapshot, collection, query, orderBy, limit, getDocs } from "firebase/firestore";
 
 const firebaseAuthService = {
-  register: async (email, password) => {
+  register: async (email, password, displayName = '') => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Update the user's display name
+      if (displayName) {
+        await firebaseUpdateProfile(userCredential.user, { displayName });
+      }
+      
+      // Create user document in Firestore
+      await setDoc(doc(db, 'users', userCredential.user.uid), {
+        email: userCredential.user.email,
+        displayName: displayName || userCredential.user.displayName || '',
+        createdAt: new Date(),
+        settings: {
+          language: 'english',
+          fontSize: 'medium',
+          sound: true,
+          notifications: true,
+          theme: 'system'
+        },
+        learningLanguages: ['arabic'],
+        baseLanguage: 'english',
+        xp: 0,
+        level: 1,
+        streak: 0,
+        wordsLearned: 0
+      });
+      
       return { success: true, user: userCredential.user };
     } catch (error) {
       console.error("Registration error:", error);
@@ -95,6 +122,128 @@ const firebaseAuthService = {
   // Listen to authentication state changes
   onAuthStateChanged: (callback) => {
     return onAuthStateChanged(auth, callback);
+  },
+
+  // Get user data from Firestore
+  getUserData: async (uid) => {
+    try {
+      const userDoc = await getDoc(doc(db, 'users', uid));
+      if (userDoc.exists()) {
+        return { success: true, data: userDoc.data() };
+      } else {
+        return { success: false, error: 'User document not found' };
+      }
+    } catch (error) {
+      console.error("Get user data error:", error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Update user profile
+  updateProfile: async (uid, profileData) => {
+    try {
+      await updateDoc(doc(db, 'users', uid), {
+        displayName: profileData.displayName,
+        email: profileData.email,
+        updatedAt: new Date()
+      });
+      return { success: true };
+    } catch (error) {
+      console.error("Update profile error:", error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Update user settings
+  updateSettings: async (uid, settings) => {
+    try {
+      await updateDoc(doc(db, 'users', uid), {
+        settings: settings,
+        updatedAt: new Date()
+      });
+      return { success: true };
+    } catch (error) {
+      console.error("Update settings error:", error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Update learning languages
+  updateLearningLanguages: async (uid, languages) => {
+    try {
+      await updateDoc(doc(db, 'users', uid), {
+        learningLanguages: languages,
+        updatedAt: new Date()
+      });
+      return { success: true };
+    } catch (error) {
+      console.error("Update learning languages error:", error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Update base language
+  updateBaseLanguage: async (uid, language) => {
+    try {
+      await updateDoc(doc(db, 'users', uid), {
+        baseLanguage: language,
+        updatedAt: new Date()
+      });
+      return { success: true };
+    } catch (error) {
+      console.error("Update base language error:", error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Listen to user data changes
+  onUserDataChange: (uid, callback) => {
+    return onSnapshot(doc(db, 'users', uid), (doc) => {
+      if (doc.exists()) {
+        callback(doc.data());
+      } else {
+        callback(null);
+      }
+    });
+  },
+
+  // Get leaderboard data
+  getLeaderboard: async () => {
+    try {
+      const leaderboardQuery = query(
+        collection(db, 'users'),
+        orderBy('xp', 'desc'),
+        limit(10)
+      );
+      
+      const snapshot = await getDocs(leaderboardQuery);
+      const leaderboard = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      return { success: true, data: leaderboard };
+    } catch (error) {
+      console.error("Get leaderboard error:", error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Listen to leaderboard changes
+  onLeaderboardChange: (callback) => {
+    const leaderboardQuery = query(
+      collection(db, 'users'),
+      orderBy('xp', 'desc'),
+      limit(10)
+    );
+    
+    return onSnapshot(leaderboardQuery, (snapshot) => {
+      const leaderboard = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      callback(leaderboard);
+    });
   }
 };
 
