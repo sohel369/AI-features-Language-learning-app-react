@@ -2558,7 +2558,7 @@ const LanguageLearningMVP = () => {
         const fontSizeMap = {
           small: '14px',
           medium: '16px',
-          large: '18px'
+          large: '22px'
         };
         const fontSizeValue = fontSizeMap[fontSize] || '16px';
         document.documentElement.style.fontSize = fontSizeValue;
@@ -2830,7 +2830,7 @@ const LanguageLearningMVP = () => {
               compact={true}
             />
               <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white text-lg font-bold shadow-lg">
-                {userData?.displayName?.charAt(0)?.toUpperCase() || 'U'}
+                {userData?.displayName?.charAt(0)?.toUpperCase() || 'You'}
               </div>
             </div>
           </div>
