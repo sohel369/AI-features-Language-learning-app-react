@@ -144,12 +144,15 @@ const INTERFACE_LANGUAGES = {
 
 const TRANSLATIONS = {
   english: {
+    appName: 'LinguaAI',
+    appTagline: 'Smart Language Learning',
     welcomeBack: 'Welcome back! 👋',
     readyToContinue: 'Ready to continue learning?',
     dayStreak: 'Day Streak',
     totalXP: 'Total XP',
     level: 'Level',
     selectLanguage: 'Select Language',
+    changeLanguageDescription: 'Choose your preferred language for the app interface',
     continueLesson: 'Continue Lesson',
     aiCoach: 'AI Coach',
     lessons: 'Lessons',
@@ -161,6 +164,8 @@ const TRANSLATIONS = {
     nextQuestion: 'Next Question',
     finishQuiz: 'Finish Quiz',
     aiLanguageCoach: 'AI Language Coach',
+    chooseLearningLanguage: 'Choose Your Learning Language',
+    whatLanguageToLearn: 'What language would you like to learn with your AI coach?',
     pronunciationCoach: 'Pronunciation Coach',
     say: 'Say: ',
     analyzingPronunciation: 'AI is analyzing your pronunciation...',
@@ -168,9 +173,14 @@ const TRANSLATIONS = {
     askAboutLearning: 'Ask me anything about language learning...',
     send: 'Send',
     profile: 'Profile',
+    trackProgress: 'Track your progress and customize your experience',
+    logout: 'Logout',
+    stats: 'Stats',
+    settings: 'Settings',
+    leaderboard: 'Leaderboard',
+    languageExplorer: 'Language Explorer',
     achievements: 'Achievements',
     weeklyLeaderboard: 'Weekly Leaderboard',
-    settings: 'Settings',
     accessibility: 'Accessibility',
     fontSize: 'Font Size',
     highContrast: 'High Contrast',
@@ -220,12 +230,15 @@ const TRANSLATIONS = {
     trueFalse: 'True or False:'
   },
   arabic: {
+    appName: 'لينجوا إيه آي',
+    appTagline: 'تعلم اللغة الذكي',
     welcomeBack: 'مرحباً بعودتك! 👋',
     readyToContinue: 'هل أنت جاهز لمواصلة التعلم؟',
     dayStreak: 'سلسلة اليوم',
     totalXP: 'إجمالي الخبرة',
     level: 'المستوى',
     selectLanguage: 'اختر اللغة',
+    changeLanguageDescription: 'اختر لغتك المفضلة لواجهة التطبيق',
     continueLesson: 'متابعة الدرس',
     aiCoach: 'مدرب الذكاء الاصطناعي',
     lessons: 'الدروس',
@@ -237,6 +250,8 @@ const TRANSLATIONS = {
     nextQuestion: 'السؤال التالي',
     finishQuiz: 'إنهاء الاختبار',
     aiLanguageCoach: 'مدرب اللغة بالذكاء الاصطناعي',
+    chooseLearningLanguage: 'اختر لغة التعلم الخاصة بك',
+    whatLanguageToLearn: 'ما هي اللغة التي تريد تعلمها مع مدرب الذكاء الاصطناعي؟',
     pronunciationCoach: 'مدرب النطق',
     say: 'قل: ',
     analyzingPronunciation: 'الذكاء الاصطناعي يحلل نطقك...',
@@ -244,9 +259,14 @@ const TRANSLATIONS = {
     askAboutLearning: 'اسألني أي شيء عن تعلم اللغة...',
     send: 'إرسال',
     profile: 'الملف الشخصي',
+    trackProgress: 'تتبع تقدمك وخصص تجربتك',
+    logout: 'تسجيل الخروج',
+    stats: 'الإحصائيات',
+    settings: 'الإعدادات',
+    leaderboard: 'لوحة الصدارة',
+    languageExplorer: 'مستكشف اللغة',
     achievements: 'الإنجازات',
     weeklyLeaderboard: 'لوحة الصدارة الأسبوعية',
-    settings: 'الإعدادات',
     accessibility: 'إمكانية الوصول',
     fontSize: 'حجم الخط',
     highContrast: 'تباين عالي',
@@ -296,12 +316,15 @@ const TRANSLATIONS = {
     trueFalse: 'صح أم خطأ:'
   },
   dutch: {
+    appName: 'LinguaAI',
+    appTagline: 'Slimme Taalleren',
     welcomeBack: 'Welkom terug! 👋',
     readyToContinue: 'Klaar om verder te leren?',
     dayStreak: 'Dag Streak',
     totalXP: 'Totaal XP',
     level: 'Niveau',
     selectLanguage: 'Selecteer Taal',
+    changeLanguageDescription: 'Kies je voorkeurstaal voor de app-interface',
     continueLesson: 'Ga verder met Les',
     aiCoach: 'AI Coach',
     lessons: 'Lessen',
@@ -313,6 +336,8 @@ const TRANSLATIONS = {
     nextQuestion: 'Volgende Vraag',
     finishQuiz: 'Voltooi Quiz',
     aiLanguageCoach: 'AI Taal Coach',
+    chooseLearningLanguage: 'Kies Je Leertaal',
+    whatLanguageToLearn: 'Welke taal wil je leren met je AI coach?',
     pronunciationCoach: 'Uitspraak Coach',
     say: 'Zeg: ',
     analyzingPronunciation: 'AI analyseert je uitspraak...',
@@ -320,9 +345,14 @@ const TRANSLATIONS = {
     askAboutLearning: 'Vraag me alles over taalleren...',
     send: 'Verzenden',
     profile: 'Profiel',
+    trackProgress: 'Volg je voortgang en pas je ervaring aan',
+    logout: 'Uitloggen',
+    stats: 'Statistieken',
+    settings: 'Instellingen',
+    leaderboard: 'Ranglijst',
+    languageExplorer: 'Taal Verkenner',
     achievements: 'Prestaties',
     weeklyLeaderboard: 'Wekelijks Leaderboard',
-    settings: 'Instellingen',
     accessibility: 'Toegankelijkheid',
     fontSize: 'Lettergrootte',
     highContrast: 'Hoog Contrast',
@@ -372,12 +402,15 @@ const TRANSLATIONS = {
     trueFalse: 'Waar of niet waar:'
   },
   indonesian: {
+    appName: 'LinguaAI',
+    appTagline: 'Pembelajaran Bahasa Cerdas',
     welcomeBack: 'Selamat datang kembali! 👋',
     readyToContinue: 'Siap untuk melanjutkan belajar?',
     dayStreak: 'Streak Hari',
     totalXP: 'Total XP',
     level: 'Level',
     selectLanguage: 'Pilih Bahasa',
+    changeLanguageDescription: 'Pilih bahasa pilihan Anda untuk antarmuka aplikasi',
     continueLesson: 'Lanjutkan Pelajaran',
     aiCoach: 'Pelatih AI',
     lessons: 'Pelajaran',
@@ -389,6 +422,8 @@ const TRANSLATIONS = {
     nextQuestion: 'Pertanyaan Selanjutnya',
     finishQuiz: 'Selesai Kuis',
     aiLanguageCoach: 'Pelatih Bahasa AI',
+    chooseLearningLanguage: 'Pilih Bahasa Pembelajaran Anda',
+    whatLanguageToLearn: 'Bahasa apa yang ingin Anda pelajari dengan pelatih AI?',
     pronunciationCoach: 'Pelatih Pengucapan',
     say: 'Katakan: ',
     analyzingPronunciation: 'AI sedang menganalisis pengucapan Anda...',
@@ -396,9 +431,14 @@ const TRANSLATIONS = {
     askAboutLearning: 'Tanyakan apa saja tentang pembelajaran bahasa...',
     send: 'Kirim',
     profile: 'Profil',
+    trackProgress: 'Lacak kemajuan Anda dan sesuaikan pengalaman Anda',
+    logout: 'Keluar',
+    stats: 'Statistik',
+    settings: 'Pengaturan',
+    leaderboard: 'Papan Peringkat',
+    languageExplorer: 'Penjelajah Bahasa',
     achievements: 'Pencapaian',
     weeklyLeaderboard: 'Papan Peringkat Mingguan',
-    settings: 'Pengaturan',
     accessibility: 'Aksesibilitas',
     fontSize: 'Ukuran Font',
     highContrast: 'Kontras Tinggi',
@@ -448,12 +488,15 @@ const TRANSLATIONS = {
     trueFalse: 'Benar atau Salah:'
   },
   malay: {
+    appName: 'LinguaAI',
+    appTagline: 'Pembelajaran Bahasa Pintar',
     welcomeBack: 'Selamat kembali! 👋',
     readyToContinue: 'Sedia untuk meneruskan pembelajaran?',
     dayStreak: 'Streak Hari',
     totalXP: 'Jumlah XP',
     level: 'Tahap',
     selectLanguage: 'Pilih Bahasa',
+    changeLanguageDescription: 'Pilih bahasa pilihan anda untuk antara muka aplikasi',
     continueLesson: 'Teruskan Pelajaran',
     aiCoach: 'Jurubahasa AI',
     lessons: 'Pelajaran',
@@ -465,6 +508,8 @@ const TRANSLATIONS = {
     nextQuestion: 'Soalan Seterusnya',
     finishQuiz: 'Selesai Kuiz',
     aiLanguageCoach: 'Jurubahasa Bahasa AI',
+    chooseLearningLanguage: 'Pilih Bahasa Pembelajaran Anda',
+    whatLanguageToLearn: 'Bahasa apa yang anda mahu pelajari dengan pelatih AI?',
     pronunciationCoach: 'Jurubahasa Sebutan',
     say: 'Katakan: ',
     analyzingPronunciation: 'AI sedang menganalisis sebutan anda...',
@@ -472,9 +517,14 @@ const TRANSLATIONS = {
     askAboutLearning: 'Tanya saya apa-apa tentang pembelajaran bahasa...',
     send: 'Hantar',
     profile: 'Profil',
+    trackProgress: 'Jejak kemajuan anda dan sesuaikan pengalaman anda',
+    logout: 'Log Keluar',
+    stats: 'Statistik',
+    settings: 'Tetapan',
+    leaderboard: 'Papan Pendahulu',
+    languageExplorer: 'Penjelajah Bahasa',
     achievements: 'Pencapaian',
     weeklyLeaderboard: 'Papan Pendahulu Mingguan',
-    settings: 'Tetapan',
     accessibility: 'Aksesibiliti',
     fontSize: 'Saiz Fon',
     highContrast: 'Kontras Tinggi',
@@ -524,12 +574,15 @@ const TRANSLATIONS = {
     trueFalse: 'Betul atau salah:'
   },
   thai: {
+    appName: 'LinguaAI',
+    appTagline: 'การเรียนรู้ภาษาอัจฉริยะ',
     welcomeBack: 'ยินดีต้อนรับกลับ! 👋',
     readyToContinue: 'พร้อมที่จะเรียนต่อหรือไม่?',
     dayStreak: 'สตรีควัน',
     totalXP: 'XP รวม',
     level: 'ระดับ',
     selectLanguage: 'เลือกภาษา',
+    changeLanguageDescription: 'เลือกภาษาที่คุณต้องการสำหรับส่วนติดต่อแอป',
     continueLesson: 'ดำเนินการบทเรียนต่อ',
     aiCoach: 'โค้ช AI',
     lessons: 'บทเรียน',
@@ -541,6 +594,8 @@ const TRANSLATIONS = {
     nextQuestion: 'คำถามถัดไป',
     finishQuiz: 'จบแบบทดสอบ',
     aiLanguageCoach: 'โค้ชภาษา AI',
+    chooseLearningLanguage: 'เลือกภาษาการเรียนรู้ของคุณ',
+    whatLanguageToLearn: 'คุณต้องการเรียนภาษาอะไรกับโค้ช AI?',
     pronunciationCoach: 'โค้ชการออกเสียง',
     say: 'พูดว่า: ',
     analyzingPronunciation: 'AI กำลังวิเคราะห์การออกเสียงของคุณ...',
@@ -548,9 +603,14 @@ const TRANSLATIONS = {
     askAboutLearning: 'ถามฉันอะไรก็ได้เกี่ยวกับการเรียนภาษา...',
     send: 'ส่ง',
     profile: 'โปรไฟล์',
+    trackProgress: 'ติดตามความก้าวหน้าและปรับแต่งประสบการณ์ของคุณ',
+    logout: 'ออกจากระบบ',
+    stats: 'สถิติ',
+    settings: 'การตั้งค่า',
+    leaderboard: 'กระดานผู้นำ',
+    languageExplorer: 'นักสำรวจภาษา',
     achievements: 'ความสำเร็จ',
     weeklyLeaderboard: 'กระดานผู้นำรายสัปดาห์',
-    settings: 'การตั้งค่า',
     accessibility: 'การเข้าถึง',
     fontSize: 'ขนาดตัวอักษร',
     highContrast: 'คอนทราสต์สูง',
@@ -600,12 +660,15 @@ const TRANSLATIONS = {
     trueFalse: 'จริงหรือเท็จ:'
   },
   khmer: {
+    appName: 'LinguaAI',
+    appTagline: 'ការរៀនភាសាឆ្លាត',
     welcomeBack: 'សូមស្វាគមន៍ត្រឡប់មកវិញ! 👋',
     readyToContinue: 'ត្រៀមខ្លួនដើម្បីបន្តការរៀនឬទេ?',
     dayStreak: 'ស្ត្រីកថ្ងៃ',
     totalXP: 'XP សរុប',
     level: 'កម្រិត',
     selectLanguage: 'ជ្រើសរើសភាសា',
+    changeLanguageDescription: 'ជ្រើសរើសភាសាដែលអ្នកចូលចិត្តសម្រាប់ចំណុចប្រទាក់កម្មវិធី',
     continueLesson: 'បន្តមេរៀន',
     aiCoach: 'គ្រូ AI',
     lessons: 'មេរៀន',
@@ -617,6 +680,8 @@ const TRANSLATIONS = {
     nextQuestion: 'សំណួរបន្ទាប់',
     finishQuiz: 'បញ្ចប់សំណួរ',
     aiLanguageCoach: 'គ្រូភាសា AI',
+    chooseLearningLanguage: 'ជ្រើសរើសភាសាការរៀនរបស់អ្នក',
+    whatLanguageToLearn: 'អ្នកចង់រៀនភាសាអ្វីជាមួយគ្រូ AI?',
     pronunciationCoach: 'គ្រូការបញ្ចេញសំឡេង',
     say: 'និយាយថា: ',
     analyzingPronunciation: 'AI កំពុងវិភាគការបញ្ចេញសំឡេងរបស់អ្នក...',
@@ -624,9 +689,14 @@ const TRANSLATIONS = {
     askAboutLearning: 'សួរខ្ញុំអ្វីក៏ដោយអំពីការរៀនភាសា...',
     send: 'ផ្ញើ',
     profile: 'ប្រវត្តិរូប',
+    trackProgress: 'តាមដានវឌ្ឍនភាពរបស់អ្នក និងប្ដូរប្រែបទពិសោធន៍របស់អ្នក',
+    logout: 'ចេញពីប្រព័ន្ធ',
+    stats: 'ស្ថិតិ',
+    settings: 'ការកំណត់',
+    leaderboard: 'តារាងមេដឹកនាំ',
+    languageExplorer: 'អ្នកស្រាវជ្រាវភាសា',
     achievements: 'សមិទ្ធិផល',
     weeklyLeaderboard: 'តារាងមេដឹកនាំប្រចាំសប្តាហ៍',
-    settings: 'ការកំណត់',
     accessibility: 'ការចូលដំណើរ',
     fontSize: 'ទំហំអក្សរ',
     highContrast: 'កម្រិតផ្ទុយខ្ពស់',
@@ -835,8 +905,16 @@ const LanguageLearningMVP = () => {
     progress: 0
   });
 
-  // Get current language with RTL support
-  const currentLanguage = useMemo(() => INTERFACE_LANGUAGES[selectedLanguage], [selectedLanguage]);
+  // Onboarding state
+  const [onboardingStep, setOnboardingStep] = useState(0);
+  const [showOnboarding, setShowOnboarding] = useState(true);
+  const [onboardingData, setOnboardingData] = useState({
+    selectedLanguage: null,
+    learningLanguages: []
+  });
+
+  // Get current language with RTL support - use globalLanguage for consistency
+  const currentLanguage = useMemo(() => INTERFACE_LANGUAGES[globalLanguage], [globalLanguage]);
 
   // Global language change handler
   const handleGlobalLanguageChange = useCallback((newLanguage) => {
@@ -844,7 +922,8 @@ const LanguageLearningMVP = () => {
     localStorage.setItem('globalLanguage', newLanguage);
 
     // Apply RTL/LTR styling to document
-    const isRTL = newLanguage === 'arabic';
+    const languageData = INTERFACE_LANGUAGES[newLanguage];
+    const isRTL = languageData?.rtl || false;
     document.documentElement.setAttribute('dir', isRTL ? 'rtl' : 'ltr');
     document.documentElement.setAttribute('lang', newLanguage);
   }, []);
@@ -859,11 +938,20 @@ const LanguageLearningMVP = () => {
     const savedLanguage = localStorage.getItem('globalLanguage');
     if (savedLanguage) {
       setGlobalLanguage(savedLanguage);
-      const isRTL = savedLanguage === 'arabic';
+      setSelectedLanguage(savedLanguage); // Sync selectedLanguage with globalLanguage
+      const languageData = INTERFACE_LANGUAGES[savedLanguage];
+      const isRTL = languageData?.rtl || false;
       document.documentElement.setAttribute('dir', isRTL ? 'rtl' : 'ltr');
       document.documentElement.setAttribute('lang', savedLanguage);
     }
   }, []);
+
+  // Sync selectedLanguage with globalLanguage when globalLanguage changes
+  useEffect(() => {
+    if (globalLanguage && globalLanguage !== selectedLanguage) {
+      setSelectedLanguage(globalLanguage);
+    }
+  }, [globalLanguage, selectedLanguage]);
 
   // Function to track notifications
   const trackNotification = (type) => {
@@ -896,6 +984,147 @@ const LanguageLearningMVP = () => {
       }
     }
   }, []);
+
+  // Check if onboarding should be shown
+  useEffect(() => {
+    const hasCompletedOnboarding = localStorage.getItem('onboardingCompleted');
+    const hasSelectedLanguage = localStorage.getItem('selectedLanguage');
+    
+    if (hasCompletedOnboarding && hasSelectedLanguage) {
+      setShowOnboarding(false);
+    } else {
+      setShowOnboarding(true);
+    }
+  }, []);
+
+  // Onboarding functions
+  const nextOnboardingStep = () => {
+    setOnboardingStep(prev => prev + 1);
+  };
+
+  const prevOnboardingStep = () => {
+    setOnboardingStep(prev => Math.max(0, prev - 1));
+  };
+
+  const completeOnboarding = () => {
+    localStorage.setItem('onboardingCompleted', 'true');
+    setShowOnboarding(false);
+    
+    // Apply selected language globally
+    if (onboardingData.selectedLanguage) {
+      setSelectedLanguage(onboardingData.selectedLanguage);
+      localStorage.setItem('selectedLanguage', onboardingData.selectedLanguage);
+    }
+    
+    // Save learning languages if available
+    if (onboardingData.learningLanguages) {
+      localStorage.setItem('learningLanguages', JSON.stringify(onboardingData.learningLanguages));
+    }
+    
+    // Navigate to home page
+    setCurrentScreen('home');
+  };
+
+  // Onboarding Components
+  const AuthenticationStep = () => {
+    const [isLogin, setIsLogin] = useState(false);
+
+    // Auto-proceed to language selection after successful authentication
+    useEffect(() => {
+      if (isAuthenticated && onboardingStep === 1) {
+        nextOnboardingStep();
+      }
+    }, [isAuthenticated, onboardingStep]);
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-slate-800/50 backdrop-blur-sm rounded-2xl p-8 border border-slate-700">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <span className="text-3xl">🔐</span>
+            </div>
+            <h1 className="text-2xl font-bold text-white mb-2">
+              {isLogin ? 'Welcome Back' : 'Create Your Account'}
+            </h1>
+            <p className="text-slate-400">
+              {isLogin ? 'Sign in to continue your learning journey' : 'Sign up to save your progress and access all features'}
+            </p>
+          </div>
+
+          {/* Toggle between Login and Signup */}
+          <div className="flex bg-slate-700/50 rounded-xl p-1 mb-6">
+            <button
+              onClick={() => setIsLogin(false)}
+              className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
+                !isLogin
+                  ? 'bg-blue-600 text-white'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Sign Up
+            </button>
+            <button
+              onClick={() => setIsLogin(true)}
+              className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
+                isLogin
+                  ? 'bg-blue-600 text-white'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Sign In
+            </button>
+          </div>
+
+          {/* Auth Form */}
+          <div className="bg-slate-700/30 rounded-xl p-6">
+            <AuthForm 
+              onAuthSuccess={handleAuthSuccess}
+              onAuthError={setAuthError}
+              showSignUp={!isLogin}
+            />
+            
+            {authError && (
+              <div className="mt-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
+                <p className="text-red-300 text-sm">{authError}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Skip Option */}
+          <div className="mt-6 text-center">
+            <button
+              onClick={nextOnboardingStep}
+              className="text-slate-400 hover:text-white transition-colors"
+            >
+              Skip for now
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const LanguageSelectionStep = () => {
+    const handleLanguageSelected = (languageData) => {
+      // Apply the selected languages and base language
+      setOnboardingData(prev => ({
+        ...prev,
+        selectedLanguage: languageData.baseLanguage,
+        learningLanguages: languageData.learningLanguages
+      }));
+      
+      // Complete onboarding and go to home page
+      completeOnboarding();
+    };
+
+    return (
+      <LanguageSelection 
+        onLanguageSelected={handleLanguageSelected}
+        isLoading={false}
+      />
+    );
+  };
 
   // PWA Installation and Notification Setup
   useEffect(() => {
@@ -975,7 +1204,7 @@ const LanguageLearningMVP = () => {
     { id: 'quiz', icon: Target, labelKey: 'quizNav' },
     { id: 'ai-coach', icon: Brain, labelKey: 'aiCoachNav' },
     { id: 'profile', icon: User, labelKey: 'profileNav' }
-  ], [t]);
+  ], []);
 
 
   // Enhanced TTS function using Google TTS service with fallback
@@ -1054,8 +1283,8 @@ const LanguageLearningMVP = () => {
         fontSize: 'medium'
       });
 
-      // Don't automatically show language selection - let user go to home first
-      setShowLanguageSelection(false);
+      // Show language selection for new users after sign up
+      setShowLanguageSelection(true);
       setShowAuthForm(false);
       setCurrentScreen('home');
     } else if (!isAuthenticated && !isLoading) {
@@ -1099,13 +1328,13 @@ const LanguageLearningMVP = () => {
     if (deferredPrompt) {
       try {
         console.log('Showing install prompt...');
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
         console.log(`User response to the install prompt: ${outcome}`);
         
-        if (outcome === 'accepted') {
+      if (outcome === 'accepted') {
           console.log('User accepted the install prompt');
-          setShowInstallPrompt(false);
+        setShowInstallPrompt(false);
           setIsInstalled(true);
           
           // Setup notifications after installation
@@ -1153,7 +1382,9 @@ const LanguageLearningMVP = () => {
       if (authData.isLogin) {
         const result = await firebaseAuthService.signIn(authData.email, authData.password);
         if (result.success) {
+          console.log('Login successful, showing language selection');
           setShowAuthForm(false);
+          setShowLanguageSelection(true);
           setCurrentScreen('home');
         } else {
           setAuthError(result.error);
@@ -1165,7 +1396,9 @@ const LanguageLearningMVP = () => {
           authData.displayName
         );
         if (result.success) {
+          console.log('Signup successful, showing language selection');
           setShowAuthForm(false);
+          setShowLanguageSelection(true);
           setCurrentScreen('home');
         } else {
           setAuthError(result.error);
@@ -1180,6 +1413,18 @@ const LanguageLearningMVP = () => {
     try {
       await firebaseAuthService.updateLearningLanguages(languageData.learningLanguages);
       await firebaseAuthService.updateBaseLanguage(languageData.baseLanguage);
+      
+      // Update global language state
+      setGlobalLanguage(languageData.baseLanguage);
+      setSelectedLanguage(languageData.baseLanguage);
+      localStorage.setItem('globalLanguage', languageData.baseLanguage);
+      
+      // Apply RTL/LTR styling to document
+      const languageData_obj = INTERFACE_LANGUAGES[languageData.baseLanguage];
+      const isRTL = languageData_obj?.rtl || false;
+      document.documentElement.setAttribute('dir', isRTL ? 'rtl' : 'ltr');
+      document.documentElement.setAttribute('lang', languageData.baseLanguage);
+      
       setShowLanguageSelection(false);
     } catch (error) {
       setAuthError('Failed to save language preferences');
@@ -1213,7 +1458,7 @@ const LanguageLearningMVP = () => {
     </nav>
   ));
 
-  const HomeScreen = () => (
+ const HomeScreen = () => (
     <div className={`space-y-6 ${currentLanguage?.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage?.rtl ? 'rtl' : 'ltr'}>
       {/* Header */}
       <div className="bg-gradient-to-br from-blue-900 to-purple-900 rounded-2xl p-6 text-white">
@@ -1225,12 +1470,12 @@ const LanguageLearningMVP = () => {
             <p className="text-blue-200">{t('readyToContinue')}</p>
           </div>
           <div className="flex items-center gap-3">
-            {/* <GlobalLanguageToggle 
+            <GlobalLanguageToggle 
               className="w-40" 
               globalLanguage={globalLanguage}
               onLanguageChange={handleGlobalLanguageChange}
               compact={true}
-            /> */}
+            />
             <button
               onClick={() => setCurrentScreen('settings')}
               className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors"
@@ -1268,21 +1513,26 @@ const LanguageLearningMVP = () => {
       </div>
 
       {/* Language Selection */}
-      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6">
+      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border-2 border-blue-500/20">
         <h2 className={`font-bold text-white mb-4 flex items-center ${fontSize === 'text-sm' ? 'text-lg' : fontSize === 'text-lg' ? 'text-xl' : 'text-2xl'}`}>
           <Globe className="mr-2" size={20} />
           {t('selectLanguage')}
         </h2>
-        <div className="grid grid-cols-2 gap-3">
+        <p className="text-slate-400 text-sm mb-4">
+          {t('changeLanguageDescription')}
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {Object.entries(INTERFACE_LANGUAGES).map(([key, lang]) => (
             <button
               key={key}
-              onClick={() => setSelectedLanguage(key)}
-              className={`p-4 rounded-xl border-2 transition-all ${selectedLanguage === key
+              onClick={() => {
+                handleGlobalLanguageChange(key);
+              }}
+              className={`p-4 rounded-xl border-2 transition-all ${globalLanguage === key
                 ? 'border-blue-500 bg-blue-500/20 text-blue-300'
                 : 'border-slate-600 bg-slate-700/50 text-slate-300 hover:border-slate-500'
                 }`}
-              aria-pressed={selectedLanguage === key}
+              aria-pressed={globalLanguage === key}
             >
               <div className="text-2xl mb-2">{lang.flag}</div>
               <div className={`font-medium ${fontSize}`}>{lang.name}</div>
@@ -1309,9 +1559,9 @@ const LanguageLearningMVP = () => {
         </button>
       </div>
     </div>
-  );
+  ); 
 
-  const LessonsScreen = () => {
+  const LessonsScreen = ({ t, globalLanguage, onGlobalLanguageChange }) => {
     const [activeTab, setActiveTab] = useState(learningLanguages[0] || 'english');
     const [lessonLanguage, setLessonLanguage] = useState(() => {
       // Load from localStorage or default to english
@@ -1837,7 +2087,7 @@ const LanguageLearningMVP = () => {
   };
 
 
-  const AICoachScreen = ({ t, selectedLanguage, speakText, fontSize }) => {
+  const AICoachScreen = ({ t, globalLanguage, speakText, fontSize }) => {
     const [learningLanguage, setLearningLanguage] = useState(null); // null = not selected yet
     const [pronunciationScore, setPronunciationScore] = useState(null);
     const [isRecording, setIsRecording] = useState(false);
@@ -2008,7 +2258,7 @@ const LanguageLearningMVP = () => {
         );
       }
 
-      const langRules = rules[selectedLanguage] || rules.english;
+      const langRules = rules[globalLanguage] || rules.english;
       langRules.forEach(rule => {
         if (rule.pattern.test(text)) {
           corrections.push({
@@ -2033,11 +2283,11 @@ const LanguageLearningMVP = () => {
 
       // Mock phoneme feedback based on language
       let phonemeFeedback = '';
-      if (selectedLanguage === 'english') {
+      if (globalLanguage === 'english') {
         phonemeFeedback = transcript.toLowerCase().includes('hello')
           ? 'Great stress on "hello".'
           : 'Work on stressing the first syllable in "hello".';
-      } else if (selectedLanguage === 'arabic') {
+      } else if (globalLanguage === 'arabic') {
         phonemeFeedback = transcript.includes('مَرْحَبًا') ? 'Good use of diacritics in pronunciation.' : 'Focus on the harakat (vowels) for clarity.';
       } // Extend for other languages
 
@@ -2055,7 +2305,7 @@ const LanguageLearningMVP = () => {
         thai: 'สวัสดี คุณสบายดีไหมวันนี้?',
         khmer: 'សួស្តី អ្នកសប្បាយជាដើម្បីទេថ្ងៃនេះ?'
       };
-      setExpectedText(expectedTexts[selectedLanguage] || expectedTexts.english);
+      setExpectedText(expectedTexts[globalLanguage] || expectedTexts.english);
 
       // Initialize SpeechRecognition with language support
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -2072,7 +2322,7 @@ const LanguageLearningMVP = () => {
           khmer: 'km-KH',
           english: 'en-US'
         };
-        recognitionRef.current.lang = langMap[selectedLanguage] || 'en-US';
+        recognitionRef.current.lang = langMap[globalLanguage] || 'en-US';
 
         recognitionRef.current.onresult = (e) => {
           let interimTranscript = '';
@@ -2129,17 +2379,17 @@ const LanguageLearningMVP = () => {
           recognitionRef.current.stop();
         }
       };
-    }, [selectedLanguage, expectedText]);
+    }, [globalLanguage, expectedText]);
 
     // Speak AI messages (auto-detect Arabic and enforce Arabic TTS with diacritics)
     useEffect(() => {
       if (chatMessages.length > 0 && chatMessages[chatMessages.length - 1].type === 'ai') {
         const msg = chatMessages[chatMessages.length - 1].message || '';
         const containsArabic = /[\u0600-\u06FF]/.test(msg);
-        const lang = containsArabic ? 'arabic' : selectedLanguage;
+        const lang = containsArabic ? 'arabic' : globalLanguage;
         speakText(msg, lang, { rate: containsArabic ? 0.9 : 1.0, pitch: 1.0 });
       }
-    }, [chatMessages, selectedLanguage, speakText]);
+    }, [chatMessages, globalLanguage, speakText]);
 
     const startRecording = useCallback(() => {
       // Prevent multiple starts using ref for immediate check
@@ -2221,7 +2471,7 @@ const LanguageLearningMVP = () => {
           khmer: 'km-KH',
           english: 'en-US'
         };
-        chatRecognition.lang = langMap[selectedLanguage] || 'en-US';
+        chatRecognition.lang = langMap[globalLanguage] || 'en-US';
 
         chatRecognition.onresult = (e) => {
           const text = e.results[0][0].transcript;
@@ -2256,7 +2506,7 @@ const LanguageLearningMVP = () => {
           setIsRecording(false);
         }, 2000);
       }
-    }, [selectedLanguage]);
+    }, [globalLanguage]);
 
     const sendMessage = useCallback(() => {
       if (!inputMessage.trim()) return;
@@ -2294,7 +2544,7 @@ const LanguageLearningMVP = () => {
         }
       ]);
       setInputMessage('');
-    }, [inputMessage, selectedLanguage]);
+    }, [inputMessage, globalLanguage]);
 
     // Cleanup effect to reset recording state
     useEffect(() => {
@@ -2310,9 +2560,9 @@ const LanguageLearningMVP = () => {
       };
     }, []);
 
-    // Determine RTL based on selected language key
+    // Determine RTL based on global language key
     const rtlLanguages = new Set(['arabic', 'hebrew', 'urdu', 'farsi']);
-    const isRTL = rtlLanguages.has(String(selectedLanguage).toLowerCase());
+    const isRTL = rtlLanguages.has(String(globalLanguage).toLowerCase());
     // Show language selection if not selected yet
     if (learningLanguage === null) {
       return (
@@ -2334,10 +2584,10 @@ const LanguageLearningMVP = () => {
           <div className="bg-slate-800/70 backdrop-blur-lg rounded-3xl p-8 shadow-xl border border-slate-700/50">
             <div className="text-center mb-8">
               <h2 className={`font-bold text-white mb-4 ${fontSize === 'text-sm' ? 'text-2xl' : fontSize === 'text-lg' ? 'text-3xl' : 'text-4xl'}`}>
-                Choose Your Learning Language
+                {t('chooseLearningLanguage')}
               </h2>
               <p className="text-slate-400 text-lg">
-                What language would you like to learn with your AI coach?
+                {t('whatLanguageToLearn')}
               </p>
             </div>
 
@@ -2518,7 +2768,7 @@ const LanguageLearningMVP = () => {
     );
   };
 
-  const ProfileScreen = () => {
+  const ProfileScreen = ({ t, globalLanguage, onGlobalLanguageChange }) => {
     const { user, userData, isUpdating, updateProfile, updateSettings, updateLearningLanguages, updateBaseLanguage, logout, leaderboard } = useContext(UserContext);
     
     // Apply global settings
@@ -2811,8 +3061,8 @@ const LanguageLearningMVP = () => {
           {/* Header */}
           <div className="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="w-full sm:w-auto">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Profile</h1>
-              <p className="text-gray-600">Track your progress and customize your experience</p>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('profile')}</h1>
+              <p className="text-gray-600">{t('trackProgress')}</p>
             </div>
            
             <div className="flex items-center gap-4 self-end sm:self-auto">
@@ -2821,7 +3071,7 @@ const LanguageLearningMVP = () => {
                 className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
               >
                 <LogOut size={18} />
-                Logout
+                {t('logout')}
               </button>
                <GlobalLanguageToggle 
               className="w-40" 
@@ -2839,9 +3089,9 @@ const LanguageLearningMVP = () => {
           <div className="mb-8 bg-white rounded-2xl shadow-lg p-2">
             <div className="grid grid-cols-3 gap-2">
               {[
-                { id: 'stats', label: 'Stats', icon: TrendingUp },
-                { id: 'settings', label: 'Settings', icon: Settings },
-                { id: 'leaderboard', label: 'Leaderboard', icon: Trophy }
+                { id: 'stats', label: t('stats'), icon: TrendingUp },
+                { id: 'settings', label: t('settings'), icon: Settings },
+                { id: 'leaderboard', label: t('leaderboard'), icon: Trophy }
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -2874,7 +3124,7 @@ const LanguageLearningMVP = () => {
                     </div>
                     <div className="text-center sm:text-left flex-1">
                       <h2 className="text-2xl font-bold mb-2">{userData?.displayName || 'User'}</h2>
-                      <p className="text-blue-200 text-lg">Language Explorer</p>
+                      <p className="text-blue-200 text-lg">{t('languageExplorer')}</p>
                       <div className="flex flex-wrap gap-2 mt-3 justify-center sm:justify-start">
                         {learningLanguages.map((lang) => (
                           <span key={lang} className="px-3 py-1 bg-white/20 backdrop-blur rounded-full text-sm font-medium">
@@ -3273,7 +3523,7 @@ const LanguageLearningMVP = () => {
                             settings.fontSize === size
                               ? 'bg-blue-600 text-white shadow-lg'
                               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          }`}
+                            }`}
                         >
                           {size.charAt(0).toUpperCase() + size.slice(1)}
                         </button>
@@ -3507,7 +3757,7 @@ const LanguageLearningMVP = () => {
       </div>
     );
   };
-  const SettingsScreen = () => (
+  const SettingsScreen = ({ t, globalLanguage, onGlobalLanguageChange }) => (
     <div className={`space-y-6 ${currentLanguage?.rtl ? 'rtl' : 'ltr'}`} dir={currentLanguage?.rtl ? 'rtl' : 'ltr'}>
       <div className="flex items-center justify-between">
         <button
@@ -3657,7 +3907,7 @@ const LanguageLearningMVP = () => {
   );
 
   // Placement Test Screen (updated for multi-lang)
-  const PlacementTestScreen = () => {
+  const PlacementTestScreen = ({ t }) => {
     const [testStep, setTestStep] = useState(0);
     const [testResults, setTestResults] = useState(null);
 
@@ -3754,7 +4004,7 @@ const LanguageLearningMVP = () => {
     );
   };
 
-  const TeacherScreen = () => {
+  const TeacherScreen = ({ t }) => {
     const [isLiveSession, setIsLiveSession] = useState(false);
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [isVoiceCallActive, setIsVoiceCallActive] = useState(false);
@@ -4165,13 +4415,13 @@ const LanguageLearningMVP = () => {
   const renderScreen = () => {
     switch (currentScreen) {
       case 'home': return <HomeScreen />;
-      case 'lessons': return <LessonsScreen />;
+      case 'lessons': return <LessonsScreen t={t} globalLanguage={globalLanguage} onGlobalLanguageChange={handleGlobalLanguageChange} />;
       case 'quiz': return <QuizScreenEnhanced selectedLanguage={selectedLanguage} onFinish={(score, total) => setQuizScore(score)} globalLanguage={globalLanguage} onGlobalLanguageChange={handleGlobalLanguageChange} />;
-      case 'ai-coach': return <AICoachScreen t={t} selectedLanguage={selectedLanguage} speakText={speakText} fontSize={fontSize} />;
-      case 'profile': return <ProfileScreen />;
-      case 'settings': return <SettingsScreen />;
-      case 'placement': return <PlacementTestScreen />;
-      case 'teacher': return <TeacherScreen />;
+      case 'ai-coach': return <AICoachScreen t={t} globalLanguage={globalLanguage} speakText={speakText} fontSize={fontSize} />;
+      case 'profile': return <ProfileScreen t={t} globalLanguage={globalLanguage} onGlobalLanguageChange={handleGlobalLanguageChange} />;
+      case 'settings': return <SettingsScreen t={t} globalLanguage={globalLanguage} onGlobalLanguageChange={handleGlobalLanguageChange} />;
+      case 'placement': return <PlacementTestScreen t={t} />;
+      case 'teacher': return <TeacherScreen t={t} />;
       default: return <HomeScreen />;
     }
   };
@@ -4204,6 +4454,7 @@ const LanguageLearningMVP = () => {
 
   // Show language selection
   if (showLanguageSelection) {
+    console.log('Showing LanguageSelection component');
     return (
       <LanguageSelection
         onLanguageSelected={handleLanguageSelection}
@@ -4241,9 +4492,28 @@ const LanguageLearningMVP = () => {
     );
   }
 
-  // Show main app only if authenticated
-  if (isAuthenticated) {
+  // Show onboarding flow
+  if (showOnboarding) {
+    const onboardingSteps = [
+      <LanguageSelectionStep key="language-selection" />
+    ];
+
     return (
+      <div className="min-h-screen">
+        {onboardingSteps[onboardingStep]}
+        
+        {/* Progress indicator - single step */}
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+          <div className="flex space-x-2">
+            <div className="w-8 h-2 bg-blue-600 rounded-full transition-all duration-300" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show main app
+  return (
       <div className={`min-h-screen ${highContrast ? 'bg-black text-white' : 'bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800'} text-white`}>
       {/* Authentication Flow Tracker Removed - Home page kept clean */}
 
@@ -4255,8 +4525,8 @@ const LanguageLearningMVP = () => {
               L
             </div>
             <div>
-              <h1 className="font-bold text-lg">LinguaAI</h1>
-              <p className="text-xs text-slate-400">Smart Language Learning</p>
+              <h1 className="font-bold text-lg">{t('appName')}</h1>
+              <p className="text-xs text-slate-400">{t('appTagline')}</p>
             </div>
           </div>
 
@@ -4323,8 +4593,8 @@ const LanguageLearningMVP = () => {
         <div className="fixed bottom-20 left-4 right-4 w-full mx-auto z-40">
           <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 rounded-xl shadow-lg">
             <div className="flex items-center justify-between mb-3">
-              <div>
-                <p className="font-medium text-sm">Install LinguaAI</p>
+            <div>
+              <p className="font-medium text-sm">Install LinguaAI</p>
                 <p className="text-xs text-blue-100">
                   Get offline access, live notifications & faster loading
                   {notificationCount > 0 && (
@@ -4350,7 +4620,7 @@ const LanguageLearningMVP = () => {
                 {deferredPrompt ? 'Install App' : 'Install Guide'}
               </button>
               {!deferredPrompt && (
-                <button
+              <button
                   onClick={() => {
                     const userAgent = navigator.userAgent;
                     let instructions = '';
@@ -4434,8 +4704,7 @@ const LanguageLearningMVP = () => {
         </div>
       </div>
     </div>
-    );
-  }
+  );
 
   // Fallback - should not reach here if authentication is working properly
   return (

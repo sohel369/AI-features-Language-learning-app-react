@@ -4,7 +4,12 @@ import { Check, Globe, ArrowRight } from 'lucide-react';
 
 const LANGUAGES = {
   english: { name: 'English', flag: '🇺🇸', rtl: false },
-  arabic: { name: 'العربية', flag: '🇸🇦', rtl: true }
+  arabic: { name: 'العربية', flag: '🇸🇦', rtl: true },
+  dutch: { name: 'Nederlands', flag: '🇳🇱', rtl: false },
+  indonesian: { name: 'Bahasa Indonesia', flag: '🇮🇩', rtl: false },
+  malay: { name: 'Bahasa Melayu', flag: '🇲🇾', rtl: false },
+  thai: { name: 'ไทย', flag: '🇹🇭', rtl: false },
+  khmer: { name: 'ខ្មែរ', flag: '🇰🇭', rtl: false }
 };
 
 const LanguageSelection = ({ onLanguageSelected, isLoading = false }) => {
@@ -49,7 +54,7 @@ const LanguageSelection = ({ onLanguageSelected, isLoading = false }) => {
         {/* Base Language Selection */}
         <div className="mb-8">
           <h3 className="text-white font-medium mb-4">App Interface Language</h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {Object.entries(LANGUAGES).map(([key, lang]) => (
               <button
                 key={key}
@@ -71,14 +76,14 @@ const LanguageSelection = ({ onLanguageSelected, isLoading = false }) => {
         <div className="mb-8">
           <h3 className="text-white font-medium mb-4">What do you want to learn?</h3>
           <p className="text-slate-400 text-sm mb-4">
-            You can select one or both languages
+            You can select multiple languages to learn
           </p>
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {Object.entries(LANGUAGES).map(([key, lang]) => (
               <button
                 key={key}
                 onClick={() => handleLanguageToggle(key)}
-                className={`w-full p-4 rounded-xl border-2 transition-all flex items-center justify-between ${
+                className={`p-4 rounded-xl border-2 transition-all flex items-center justify-between ${
                   selectedLanguages.includes(key)
                     ? 'border-blue-500 bg-blue-500/20 text-blue-300'
                     : 'border-slate-600 bg-slate-700/50 text-slate-300 hover:border-slate-500'
